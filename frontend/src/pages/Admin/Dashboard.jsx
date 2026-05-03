@@ -14,6 +14,7 @@ const statCards = [
 const quickActions = [
   { label: 'Manage Events', href: '/admin/manage-events' },
   { label: 'Manage Results', href: '/admin/manage-results' },
+  { label: 'Manage Toppers', href: '/admin/manage-toppers' },
   { label: 'Manage Gallery', href: '/admin/manage-gallery' },
   { label: 'Manage Faculty', href: '/admin/manage-faculty' },
   { label: 'Manage Announcements', href: '/admin/manage-announcements' },

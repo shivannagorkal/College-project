@@ -15,30 +15,21 @@ const normalizeBoardResult = (result) => {
 
 export const boardResultService = {
   getBoardResults: async (params = {}) => {
-    const query = new URLSearchParams({
-      ...params,
-      resultType: 'Board',
-    }).toString();
+    const query = new URLSearchParams(params).toString();
     const response = await apiClient.get(
-      `/results${query ? '?' + query : ''}`
+      `/board-results${query ? `?${query}` : ''}`
     );
     return (response.data.data || []).map(normalizeBoardResult);
   },
   createBoardResult: async (data) => {
-    const response = await apiClient.post('/results', {
-      ...data,
-      resultType: 'Board',
-    });
+    const response = await apiClient.post('/board-results', data);
     return response.data;
   },
   updateBoardResult: async (id, data) => {
-    const response = await apiClient.put(`/results/${id}`, {
-      ...data,
-      resultType: 'Board',
-    });
+    const response = await apiClient.put(`/board-results/${id}`, data);
     return response.data;
   },
   deleteBoardResult: async (id) => {
-    await apiClient.delete(`/results/${id}`);
+    await apiClient.delete(`/board-results/${id}`);
   },
 };

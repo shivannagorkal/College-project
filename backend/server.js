@@ -10,7 +10,6 @@ dotenv.config();
 // Import routes
 import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
-import resultRoutes from './routes/resultRoutes.js';
 import boardResultRoutes from './routes/boardResultRoutes.js';
 import competitiveResultRoutes from './routes/competitiveResultRoutes.js';
 import galleryRoutes from './routes/galleryRoutes.js';
@@ -51,7 +50,6 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
-app.use('/api/results', resultRoutes);
 app.use('/api/board-results', boardResultRoutes);
 app.use('/api/competitive-results', competitiveResultRoutes);
 app.use('/api/gallery', galleryRoutes);

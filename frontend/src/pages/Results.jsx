@@ -24,6 +24,16 @@ import { competitiveResultService } from '@/services/competitiveResultService';
 import { topperService } from '@/services/topperService';
 import { YEARS } from '@/utils/constants';
 
+const PhotoCell = ({ topper }) => (
+  topper.photo ? (
+    <img src={topper.photo} alt={topper.name} className="w-10 h-10 rounded-full object-cover" />
+  ) : (
+    <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-bold">
+      {getInitials(topper.name)}
+    </div>
+  )
+);
+
 export function Results() {
   const [selectedYear, setSelectedYear] = useState(
     new Date().getFullYear().toString()
@@ -33,6 +43,22 @@ export function Results() {
   const [toppers, setToppers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+//    const [searchQuery, setSearchQuery] = useState('');
+//    const [searchedStudent, setSearchedStudent] = useState(null);
+//    const [searchClicked, setSearchClicked] = useState(false);
+
+// const handleSearch = () => {
+//   setSearchClicked(true);
+
+//   const found = boardResults.find(
+//     (r) =>
+//       r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//       r.rollNo?.toString() === searchQuery
+//   );
+
+//   setSearchedStudent(found || null);
+// };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -149,6 +175,108 @@ export function Results() {
             </Select>
           </div>
 
+{/* 🔍 Result Search Section
+<Card className="mb-8 max-w-2xl mx-auto">
+  <CardHeader>
+    <CardTitle className="text-center text-xl font-bold">
+      🔍 Find Your Result
+    </CardTitle>
+    <p className="text-center text-sm text-gray-500">
+      Enter your Roll Number or Name to search
+    </p>
+  </CardHeader>
+
+  <CardContent>
+    {/* Search Input 
+    <div className="flex gap-2 mb-6">
+      <input
+        type="text"
+        placeholder="Search by name or roll no..."
+        className="flex-1 border rounded-md px-3 py-2"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+      <button
+        onClick={handleSearch}
+        className="bg-primary text-white px-4 py-2 rounded-md"
+      >
+        Search
+      </button>
+    </div>
+
+    {/* Result Display 
+    {searchedStudent && (
+      <div className="border rounded-lg p-4 shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="text-lg font-bold">{searchedStudent.name}</h3>
+            <p className="text-sm text-gray-500">
+              Class {searchedStudent.className} • Roll No: {searchedStudent.rollNo}
+            </p>
+          </div>
+
+          <div className="text-right">
+            <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm">
+              {searchedStudent.grade}
+            </span>
+            <p className="text-xl font-bold text-primary">
+              {searchedStudent.percentage}%
+            </p>
+          </div>
+        </div>
+
+        {/* Marks Table 
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Subject</TableHead>
+              <TableHead>Marks</TableHead>
+              <TableHead>Max</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {searchedStudent.subjects.map((sub, i) => (
+              <TableRow key={i}>
+                <TableCell>{sub.name}</TableCell>
+                <TableCell>{sub.marks}</TableCell>
+                <TableCell>{sub.max}</TableCell>
+                <TableCell>
+                  <span className="text-green-600 text-sm">
+                    {sub.status}
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))}
+
+            {/* Total Row 
+            <TableRow className="font-bold">
+              <TableCell>Total</TableCell>
+              <TableCell>{searchedStudent.total}</TableCell>
+              <TableCell>{searchedStudent.maxTotal}</TableCell>
+              <TableCell className="text-green-600">PASS</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+
+        <div className="text-right mt-4">
+          <button className="border px-3 py-1 rounded-md text-sm">
+            ⬇ Download Report Card
+          </button>
+        </div>
+      </div>
+    )}
+
+    {/* No Result 
+    {searchClicked && !searchedStudent && (
+      <p className="text-center text-red-500 mt-4">
+        No result found
+      </p>
+    )}
+  </CardContent>
+</Card> */}
+
           {!loading && !error && sortedToppers.length > 0 && (
             <Card className="mb-8">
               <CardHeader>
@@ -159,7 +287,8 @@ export function Results() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-center">PTC</TableHead>
+                        <TableHead className="text-center">S.No</TableHead>
+                        <TableHead>Profile</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Stream</TableHead>
                         <TableHead className="text-right">Percentage</TableHead>
@@ -171,6 +300,7 @@ export function Results() {
                           <TableCell className="text-center font-bold text-primary">
                             {topper.rank}
                           </TableCell>
+                          <TableCell><PhotoCell topper={topper} /></TableCell>
                           <TableCell className="font-medium">{topper.name}</TableCell>
                           <TableCell>
                             {topper.stream}
