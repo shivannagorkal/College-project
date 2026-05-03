@@ -16,10 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { resultService } from '@/services/resultService';
+import { topperService } from '@/services/topperService';
 import { YEARS } from '@/utils/constants';
 
 export function Results() {
@@ -27,16 +29,22 @@ export function Results() {
     new Date().getFullYear().toString()
   );
   const [allResults, setAllResults] = useState([]);
+  const [allToppers, setAllToppers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await resultService.getResults();
-        setAllResults(Array.isArray(data) ? data : []);
+        const [resultData, topperData] = await Promise.all([
+          resultService.getResults(),
+          topperService.getToppers(),
+        ]);
+        setAllResults(Array.isArray(resultData) ? resultData : []);
+        setAllToppers(Array.isArray(topperData) ? topperData : []);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -52,6 +60,15 @@ export function Results() {
   const neetResults = yearResults.filter((r) => r.resultType === 'NEET');
   const jeeResults = yearResults.filter((r) => r.resultType === 'JEE');
   const kcetResults = yearResults.filter((r) => r.resultType === 'KCET');
+
+  const yearToppers = allToppers.filter((t) => t.year.toString() === selectedYear);
+  const filteredToppers = yearToppers.filter((t) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      t.name.toLowerCase().includes(searchLower) ||
+      (t.rank && t.rank.toString().includes(searchLower))
+    );
+  });
 
   const availableYears = Array.from(
     new Set(allResults.map((r) => r.year.toString()))

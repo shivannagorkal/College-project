@@ -1,14 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarDays, Image as ImageIcon, Trophy, Bell, LogOut } from 'lucide-react';
+import { CalendarDays, Image as ImageIcon, Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const statCards = [
   { icon: CalendarDays, label: 'Events', value: '12', href: '/admin/manage-events' },
   { icon: ImageIcon, label: 'Gallery Images', value: '48', href: '/admin/manage-gallery' },
-  { icon: Trophy, label: 'Toppers', value: '25', href: '/admin/manage-toppers' },
   { icon: Bell, label: 'Announcements', value: '6', href: '/admin/manage-announcements' },
 ];
 
@@ -16,7 +15,6 @@ const quickActions = [
   { label: 'Manage Events', href: '/admin/manage-events' },
   { label: 'Manage Results', href: '/admin/manage-results' },
   { label: 'Manage Gallery', href: '/admin/manage-gallery' },
-  { label: 'Manage Toppers', href: '/admin/manage-toppers' },
   { label: 'Manage Faculty', href: '/admin/manage-faculty' },
   { label: 'Manage Announcements', href: '/admin/manage-announcements' },
 ];
