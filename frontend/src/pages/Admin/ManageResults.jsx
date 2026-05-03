@@ -1,13 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -16,288 +24,293 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, Edit2, Plus } from 'lucide-react';
-import { toast } from 'sonner';
-import { resultService } from '@/services/resultService';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Edit2, Trash2, Plus } from 'lucide-react';
+import { boardResultService } from '@/services/boardResultService';
+import { competitiveResultService } from '@/services/competitiveResultService';
+
+const YEARS = Array.from({ length: 20 }, (_, i) =>
+  new Date().getFullYear() - i
+);
 
 const PCMB = ['Kannada', 'English', 'Physics', 'Chemistry', 'Mathematics', 'Biology'];
 const PCMC = ['Kannada', 'English', 'Physics', 'Chemistry', 'Mathematics', 'Computer Science'];
 const COMMERCE = ['Kannada', 'English', 'Business Studies', 'Accountancy', 'Economics', 'Statistics'];
 
-const getSubjects = (stream, group, existingSubjects = []) => {
+const getSubjects = (stream, group) => {
   let list = [];
-
   if (stream === 'Science') {
     list = group === 'PCMB' ? PCMB : PCMC;
   } else {
     list = COMMERCE;
   }
-
-  return list.map((subject) => {
-    const existing = existingSubjects.find((item) => item.subject === subject);
-
-    return {
-      subject,
-      totalOutOf: existing?.totalOutOf ?? '',
-      highestScore: existing?.highestScore ?? '',
-      passPercentage: existing?.passPercentage ?? '',
-      avgMarks: existing?.avgMarks ?? '',
-    };
-  });
+  return list.map((subject) => ({
+    subject,
+    totalOutOf: 100,
+    highestScore: 0,
+    passPercentage: 0,
+  }));
 };
 
-const defaultBoardForm = () => ({
-  year: new Date().getFullYear(),
-  stream: 'Science',
-  className: 'PCMB',
-  totalStudents: '',
-  passedStudents: '',
-  passPercentage: '',
-  firstClass: '',
-  distinction: '',
-  totalAppeared: '',
-  totalQualified: '',
-  topScore: '',
-  topperName: '',
-  description: '',
-});
-
-const defaultCompetitiveForm = () => ({
-  year: new Date().getFullYear(),
-  stream: 'Science',
-  className: '',
-  totalStudents: '',
-  passedStudents: '',
-  passPercentage: '',
-  firstClass: '',
-  distinction: '',
-  totalAppeared: '',
-  totalQualified: '',
-  topScore: '',
-  topperName: '',
-  description: '',
-});
-
 const ManageResults = () => {
-  const [results, setResults] = useState([]);
+  const [boardResults, setBoardResults] = useState([]);
+  const [competitiveResults, setCompetitiveResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [resultType, setResultType] = useState('Board');
+  const [activeTab, setActiveTab] = useState('board');
   const [subjects, setSubjects] = useState([]);
-  const [formData, setFormData] = useState(defaultBoardForm());
 
-  const fetchResults = async () => {
-    setLoading(true);
+  const [boardFormData, setBoardFormData] = useState({
+    year: new Date().getFullYear(),
+    stream: 'Science',
+    className: 'PCMB',
+    highestPercentageInStream: '',
+    totalStudents: '',
+    passedStudents: '',
+    firstClass: '',
+    distinction: '',
+    subjects: [],
+  });
+
+  const [competitiveFormData, setCompetitiveFormData] = useState({
+    year: new Date().getFullYear(),
+    resultType: 'NEET',
+    totalAppeared: '',
+    totalQualified: '',
+    highestScore: '',
+    description: '',
+  });
+
+  const fetchBoardResults = async () => {
     try {
-      const data = await resultService.getResults();
-      setResults(data);
-    } catch (err) {
-      setError('Failed to fetch results');
-      toast.error('Failed to fetch results');
+      setLoading(true);
+      const data = await boardResultService.getBoardResults();
+      setBoardResults(data);
+    } catch (error) {
+      console.error('Error fetching board results:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCompetitiveResults = async () => {
+    try {
+      setLoading(true);
+      const data = await competitiveResultService.getCompetitiveResults();
+      setCompetitiveResults(data);
+    } catch (error) {
+      console.error('Error fetching competitive results:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchResults();
-  }, []);
+    if (activeTab === 'board') {
+      fetchBoardResults();
+    } else {
+      fetchCompetitiveResults();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
-    if (resultType !== 'Board') {
-      return;
-    }
+    const newSubjects = getSubjects(boardFormData.stream, boardFormData.className);
+    setSubjects(newSubjects);
+    setBoardFormData(prev => ({ ...prev, subjects: newSubjects }));
+  }, [boardFormData.stream, boardFormData.className]);
 
-    setSubjects((prevSubjects) => getSubjects(formData.stream, formData.className, prevSubjects));
-  }, [formData.stream, formData.className, resultType]);
-
-  useEffect(() => {
-    if (resultType !== 'Board') {
-      return;
-    }
-
-    const totalStudents = Number(formData.totalStudents) || 0;
-    const passedStudents = Number(formData.passedStudents) || 0;
-    const nextPassPercentage = totalStudents
-      ? Math.round((passedStudents / totalStudents) * 100).toString()
-      : '0';
-
-    setFormData((prev) => (
-      prev.passPercentage === nextPassPercentage
-        ? prev
-        : { ...prev, passPercentage: nextPassPercentage }
-    ));
-  }, [formData.totalStudents, formData.passedStudents, resultType]);
-
-  const handleInputChange = (e) => {
+  const handleBoardInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setBoardFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCompetitiveInputChange = (e) => {
+    const { name, value } = e.target;
+    setCompetitiveFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubjectChange = (index, field, value) => {
-    setSubjects((prev) =>
-      prev.map((subject, subjectIndex) =>
-        subjectIndex === index ? { ...subject, [field]: value } : subject
-      )
-    );
+    const newSubjects = [...subjects];
+    newSubjects[index] = { ...newSubjects[index], [field]: value };
+    setSubjects(newSubjects);
+    setBoardFormData(prev => ({ ...prev, subjects: newSubjects }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleBoardSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccessMessage('');
-
     try {
-      const submitData = {
-        ...formData,
-        className: formData.stream === 'Commerce' ? 'Commerce' : formData.className,
-        resultType,
-        subjects: resultType === 'Board' ? subjects : undefined,
+      setLoading(true);
+      const data = {
+        ...boardFormData,
+        year: Number(boardFormData.year),
+        totalStudents: Number(boardFormData.totalStudents || 0),
+        passedStudents: Number(boardFormData.passedStudents || 0),
+        firstClass: Number(boardFormData.firstClass || 0),
+        distinction: Number(boardFormData.distinction || 0),
+        highestPercentageInStream: Number(boardFormData.highestPercentageInStream || 0),
+        subjects: JSON.stringify(boardFormData.subjects),
       };
 
       if (editingId) {
-        await resultService.updateResult(editingId, submitData);
-        toast.success('Result updated successfully');
+        await boardResultService.updateBoardResult(editingId, data);
       } else {
-        await resultService.createResult(submitData);
-        toast.success('Result created successfully');
+        await boardResultService.createBoardResult(data);
       }
-
-      await fetchResults();
-      handleCloseDialog();
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to save result';
-      setError(errorMsg);
-      toast.error(errorMsg);
+      setSuccessMessage('Board result saved successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      setOpenDialog(false);
+      resetBoardForm();
+      fetchBoardResults();
+    } catch (error) {
+      console.error('Error saving board result:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddResult = (type) => {
-    setResultType(type);
-    setEditingId(null);
-    setSuccessMessage('');
-    setError('');
+  const handleCompetitiveSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const data = {
+        ...competitiveFormData,
+        year: Number(competitiveFormData.year),
+        totalAppeared: Number(competitiveFormData.totalAppeared || 0),
+        totalQualified: Number(competitiveFormData.totalQualified || 0),
+        highestScore: Number(competitiveFormData.highestScore || 0),
+      };
 
-    if (type === 'Board') {
-      const nextForm = defaultBoardForm();
-      setFormData(nextForm);
-      setSubjects(getSubjects(nextForm.stream, nextForm.className));
-    } else {
-      setFormData(defaultCompetitiveForm());
-      setSubjects([]);
+      if (editingId) {
+        await competitiveResultService.updateCompetitiveResult(editingId, data);
+      } else {
+        await competitiveResultService.createCompetitiveResult(data);
+      }
+      setSuccessMessage('Result saved successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      setOpenDialog(false);
+      resetCompetitiveForm();
+      fetchCompetitiveResults();
+    } catch (error) {
+      console.error('Error saving competitive result:', error);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  const resetBoardForm = () => {
+    setBoardFormData({
+      year: new Date().getFullYear(),
+      stream: 'Science',
+      className: 'PCMB',
+      highestPercentageInStream: '',
+      totalStudents: '',
+      passedStudents: '',
+      firstClass: '',
+      distinction: '',
+      subjects: getSubjects('Science', 'PCMB'),
+    });
+    setEditingId(null);
+  };
+
+  const resetCompetitiveForm = () => {
+    setCompetitiveFormData({
+      year: new Date().getFullYear(),
+      resultType: 'NEET',
+      totalAppeared: '',
+      totalQualified: '',
+      highestScore: '',
+      description: '',
+    });
+    setEditingId(null);
+  };
+
+  const handleAddBoardResult = () => {
+    resetBoardForm();
+    setEditingId(null);
     setOpenDialog(true);
   };
 
-  const handleEditResult = (result) => {
+  const handleAddCompetitiveResult = (type) => {
+    resetCompetitiveForm();
+    setCompetitiveFormData(prev => ({ ...prev, resultType: type }));
+    setEditingId(null);
+    setOpenDialog(true);
+  };
+
+  const handleEditBoardResult = (result) => {
+    setBoardFormData({
+      year: result.year,
+      stream: result.stream,
+      className: result.className,
+      highestPercentageInStream: result.highestPercentageInStream,
+      totalStudents: result.totalStudents,
+      passedStudents: result.passedStudents,
+      firstClass: result.firstClass,
+      distinction: result.distinction,
+      subjects: result.subjects || [],
+    });
+    setSubjects(result.subjects || []);
     setEditingId(result._id);
-    setResultType(result.resultType);
+    setOpenDialog(true);
+  };
 
-    if (result.resultType === 'Board') {
-      const nextStream = result.stream || 'Science';
-      const nextClassName = result.className || (nextStream === 'Commerce' ? 'Commerce' : 'PCMB');
-      setFormData({
-        year: result.year,
-        stream: nextStream,
-        className: nextClassName,
-        totalStudents: result.totalStudents || '',
-        passedStudents: result.passedStudents || '',
-        passPercentage: result.passPercentage || '',
-        firstClass: result.firstClass || '',
-        distinction: result.distinction || '',
-        totalAppeared: '',
-        totalQualified: '',
-        topScore: '',
-        topperName: '',
-        description: '',
-      });
-      setSubjects(getSubjects(nextStream, nextClassName, result.subjects || []));
-    } else {
-      setFormData({
-        year: result.year,
-        stream: result.stream || 'Science',
-        className: result.className || '',
-        totalStudents: '',
-        passedStudents: '',
-        passPercentage: '',
-        firstClass: '',
-        distinction: '',
-        totalAppeared: result.totalAppeared || '',
-        totalQualified: result.totalQualified || '',
-        topScore: result.topScore || '',
-        topperName: result.topperName || '',
-        description: result.description || '',
-      });
-      setSubjects([]);
-    }
-
+  const handleEditCompetitiveResult = (result) => {
+    setCompetitiveFormData({
+      year: result.year,
+      resultType: result.resultType,
+      totalAppeared: result.totalAppeared,
+      totalQualified: result.totalQualified,
+      highestScore: result.highestScore,
+      description: result.description,
+    });
+    setEditingId(result._id);
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingId(null);
-    setSubjects([]);
   };
 
-  const handleDeleteResult = async (id) => {
+  const handleDeleteBoardResult = async (id) => {
     if (window.confirm('Are you sure you want to delete this result?')) {
       try {
-        await resultService.deleteResult(id);
-        toast.success('Result deleted successfully');
-        await fetchResults();
-      } catch (err) {
-        toast.error('Failed to delete result');
+        await boardResultService.deleteBoardResult(id);
+        setSuccessMessage('Result deleted successfully');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        fetchBoardResults();
+      } catch (error) {
+        console.error('Error deleting result:', error);
       }
     }
   };
 
-  const boardResults = results.filter((r) => r.resultType === 'Board');
-  const neetResults = results.filter((r) => r.resultType === 'NEET');
-  const jeeResults = results.filter((r) => r.resultType === 'JEE');
-  const kcetResults = results.filter((r) => r.resultType === 'KCET');
+  const handleDeleteCompetitiveResult = async (id) => {
+    if (window.confirm('Are you sure you want to delete this result?')) {
+      try {
+        await competitiveResultService.deleteCompetitiveResult(id);
+        setSuccessMessage('Result deleted successfully');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        fetchCompetitiveResults();
+      } catch (error) {
+        console.error('Error deleting result:', error);
+      }
+    }
+  };
 
-  const ResultTable = ({ data, type, onEdit, onDelete }) => (
+  const BoardResultTable = ({ data }) => (
     <div className="rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Year</TableHead>
-            {type === 'Board' && (
-              <>
-                <TableHead>Stream</TableHead>
-                <TableHead>Group</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Passed</TableHead>
-                <TableHead>Pass%</TableHead>
-              </>
-            )}
-            {type !== 'Board' && (
-              <>
-                <TableHead>Appeared</TableHead>
-                <TableHead>Qualified</TableHead>
-                <TableHead>Qualified %</TableHead>
-                <TableHead>Top Score</TableHead>
-              </>
-            )}
+            <TableHead>Stream</TableHead>
+            <TableHead>Group</TableHead>
+            <TableHead>Total Students</TableHead>
+            <TableHead>Passed</TableHead>
+            <TableHead>Pass %</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -305,36 +318,86 @@ const ManageResults = () => {
           {data.length === 0 ? (
             <TableRow>
               <TableCell colSpan="7" className="text-center text-gray-500 py-4">
-                No results available
+                No board results available
               </TableCell>
             </TableRow>
           ) : (
             data.map((result) => (
               <TableRow key={result._id}>
                 <TableCell>{result.year}</TableCell>
-                {type === 'Board' && (
-                  <>
-                    <TableCell>{result.stream}</TableCell>
-                    <TableCell>{result.className}</TableCell>
-                    <TableCell>{result.totalStudents}</TableCell>
-                    <TableCell>{result.passedStudents}</TableCell>
-                    <TableCell>{result.passPercentage}%</TableCell>
-                  </>
-                )}
-                {type !== 'Board' && (
-                  <>
-                    <TableCell>{result.totalAppeared}</TableCell>
-                    <TableCell>{result.totalQualified}</TableCell>
-                    <TableCell>{result.qualifiedPercentage}%</TableCell>
-                    <TableCell>{result.topScore}</TableCell>
-                  </>
-                )}
+                <TableCell>{result.stream}</TableCell>
+                <TableCell>{result.className}</TableCell>
+                <TableCell>{result.totalStudents}</TableCell>
+                <TableCell>{result.passedStudents}</TableCell>
+                <TableCell>{result.passPercentage}%</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => onEdit(result)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditBoardResult(result)}
+                    >
                       <Edit2 className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => onDelete(result._id)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteBoardResult(result._id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
+  const CompetitiveResultTable = ({ data, type }) => (
+    <div className="rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Year</TableHead>
+            <TableHead>Total Appeared</TableHead>
+            <TableHead>Qualified</TableHead>
+            <TableHead>Qualified %</TableHead>
+            <TableHead>Highest Score</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan="6" className="text-center text-gray-500 py-4">
+                No {type} results available
+              </TableCell>
+            </TableRow>
+          ) : (
+            data.map((result) => (
+              <TableRow key={result._id}>
+                <TableCell>{result.year}</TableCell>
+                <TableCell>{result.totalAppeared}</TableCell>
+                <TableCell>{result.totalQualified}</TableCell>
+                <TableCell>{result.qualifiedPercentage}%</TableCell>
+                <TableCell>{result.highestScore}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditCompetitiveResult(result)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteCompetitiveResult(result._id)}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -348,22 +411,16 @@ const ManageResults = () => {
   );
 
   return (
-    <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">Manage Results</h1>
-
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
+    <div className="space-y-6">
       {successMessage && (
-        <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="pt-6">
+            <p className="text-green-600">{successMessage}</p>
+          </CardContent>
+        </Card>
       )}
 
-      <Tabs defaultValue="board" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="board">Board Results</TabsTrigger>
           <TabsTrigger value="neet">NEET</TabsTrigger>
@@ -371,342 +428,305 @@ const ManageResults = () => {
           <TabsTrigger value="kcet">KCET</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="board" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Board Results</h2>
-            <Button onClick={() => handleAddResult('Board')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Result
-            </Button>
-          </div>
-          <ResultTable
-            data={boardResults}
-            type="Board"
-            onEdit={handleEditResult}
-            onDelete={handleDeleteResult}
-          />
+        <TabsContent value="board" className="mt-6 space-y-4">
+          <Button onClick={handleAddBoardResult} className="mb-4">
+            <Plus className="w-4 h-4 mr-2" /> Add Board Result
+          </Button>
+          <BoardResultTable data={boardResults} />
         </TabsContent>
 
-        <TabsContent value="neet" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">NEET Results</h2>
-            <Button onClick={() => handleAddResult('NEET')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Result
-            </Button>
-          </div>
-          <ResultTable
-            data={neetResults}
+        <TabsContent value="neet" className="mt-6 space-y-4">
+          <Button onClick={() => handleAddCompetitiveResult('NEET')} className="mb-4">
+            <Plus className="w-4 h-4 mr-2" /> Add NEET Result
+          </Button>
+          <CompetitiveResultTable
+            data={competitiveResults.filter(r => r.resultType === 'NEET')}
             type="NEET"
-            onEdit={handleEditResult}
-            onDelete={handleDeleteResult}
           />
         </TabsContent>
 
-        <TabsContent value="jee" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">JEE Results</h2>
-            <Button onClick={() => handleAddResult('JEE')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Result
-            </Button>
-          </div>
-          <ResultTable
-            data={jeeResults}
+        <TabsContent value="jee" className="mt-6 space-y-4">
+          <Button onClick={() => handleAddCompetitiveResult('JEE')} className="mb-4">
+            <Plus className="w-4 h-4 mr-2" /> Add JEE Result
+          </Button>
+          <CompetitiveResultTable
+            data={competitiveResults.filter(r => r.resultType === 'JEE')}
             type="JEE"
-            onEdit={handleEditResult}
-            onDelete={handleDeleteResult}
           />
         </TabsContent>
 
-        <TabsContent value="kcet" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">KCET Results</h2>
-            <Button onClick={() => handleAddResult('KCET')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Result
-            </Button>
-          </div>
-          <ResultTable
-            data={kcetResults}
+        <TabsContent value="kcet" className="mt-6 space-y-4">
+          <Button onClick={() => handleAddCompetitiveResult('KCET')} className="mb-4">
+            <Plus className="w-4 h-4 mr-2" /> Add KCET Result
+          </Button>
+          <CompetitiveResultTable
+            data={competitiveResults.filter(r => r.resultType === 'KCET')}
             type="KCET"
-            onEdit={handleEditResult}
-            onDelete={handleDeleteResult}
           />
         </TabsContent>
       </Tabs>
 
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* Board Result Dialog */}
+      <Dialog open={openDialog && activeTab === 'board'} onOpenChange={handleCloseDialog}>
+        <DialogContent className="max-w-2xl max-h-96 overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingId ? 'Edit Result' : 'Add New Result'} ({resultType})
+              {editingId ? 'Edit Board Result' : 'Add Board Result'}
             </DialogTitle>
           </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleBoardSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="year">Year</Label>
+                <Label>Year</Label>
+                <Select
+                  value={boardFormData.year.toString()}
+                  onValueChange={(value) =>
+                    setBoardFormData(prev => ({ ...prev, year: parseInt(value) }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {YEARS.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Stream</Label>
+                <Select
+                  value={boardFormData.stream}
+                  onValueChange={(value) =>
+                    setBoardFormData(prev => ({
+                      ...prev,
+                      stream: value,
+                      className: value === 'Commerce' ? 'Commerce' : 'PCMB',
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Science">Science</SelectItem>
+                    <SelectItem value="Commerce">Commerce</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {boardFormData.stream === 'Science' && (
+                <div>
+                  <Label>Group</Label>
+                  <Select
+                    value={boardFormData.className}
+                    onValueChange={(value) =>
+                      setBoardFormData(prev => ({ ...prev, className: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PCMB">PCMB</SelectItem>
+                      <SelectItem value="PCMC">PCMC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div>
+                <Label>Highest % in Stream</Label>
                 <Input
-                  id="year"
-                  name="year"
                   type="number"
-                  value={formData.year}
-                  onChange={handleInputChange}
-                  required
+                  step="0.1"
+                  name="highestPercentageInStream"
+                  value={boardFormData.highestPercentageInStream}
+                  onChange={handleBoardInputChange}
+                />
+              </div>
+              <div>
+                <Label>Total Students</Label>
+                <Input
+                  type="number"
+                  name="totalStudents"
+                  value={boardFormData.totalStudents}
+                  onChange={handleBoardInputChange}
+                />
+              </div>
+              <div>
+                <Label>Passed Students</Label>
+                <Input
+                  type="number"
+                  name="passedStudents"
+                  value={boardFormData.passedStudents}
+                  onChange={handleBoardInputChange}
+                />
+              </div>
+              <div>
+                <Label>First Class Students</Label>
+                <Input
+                  type="number"
+                  name="firstClass"
+                  value={boardFormData.firstClass}
+                  onChange={handleBoardInputChange}
+                />
+              </div>
+              <div>
+                <Label>Distinction Students</Label>
+                <Input
+                  type="number"
+                  name="distinction"
+                  value={boardFormData.distinction}
+                  onChange={handleBoardInputChange}
                 />
               </div>
             </div>
 
-            {resultType === 'Board' && (
-              <>
-                <div className="space-y-4">
-                  <Label className="text-base font-semibold">Overall Result</Label>
+            <div className="border-t pt-4 mt-4">
+              <h3 className="font-semibold mb-3">Subject wise Performance</h3>
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Total Out Of</TableHead>
+                      <TableHead>Highest Score</TableHead>
+                      <TableHead>Pass %</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subjects.map((sub, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{sub.subject}</TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            value={sub.totalOutOf}
+                            onChange={(e) =>
+                              handleSubjectChange(index, 'totalOutOf', e.target.value)
+                            }
+                            className="w-20"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            value={sub.highestScore}
+                            onChange={(e) =>
+                              handleSubjectChange(index, 'highestScore', e.target.value)
+                            }
+                            className="w-20"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            value={sub.passPercentage}
+                            onChange={(e) =>
+                              handleSubjectChange(index, 'passPercentage', e.target.value)
+                            }
+                            className="w-20"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="stream">Stream</Label>
-                      <Select
-                        value={formData.stream}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            stream: value,
-                            className: value === 'Science' ? 'PCMB' : 'Commerce',
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Science">Science</SelectItem>
-                          <SelectItem value="Commerce">Commerce</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {formData.stream === 'Science' && (
-                      <div>
-                        <Label htmlFor="scienceGroup">Group</Label>
-                        <Select
-                          value={formData.className}
-                          onValueChange={(value) =>
-                            setFormData((prev) => ({ ...prev, className: value }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="PCMB">PCMB</SelectItem>
-                            <SelectItem value="PCMC">PCMC</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="className">Class Name</Label>
-                      <Input id="className" name="className" value={formData.className} readOnly />
-                    </div>
-                    <div>
-                      <Label htmlFor="passPercentage">Pass %</Label>
-                      <Input
-                        id="passPercentage"
-                        name="passPercentage"
-                        type="number"
-                        value={formData.passPercentage}
-                        readOnly
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="totalStudents">Total Students</Label>
-                      <Input
-                        id="totalStudents"
-                        name="totalStudents"
-                        type="number"
-                        value={formData.totalStudents}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="passedStudents">Passed Students</Label>
-                      <Input
-                        id="passedStudents"
-                        name="passedStudents"
-                        type="number"
-                        value={formData.passedStudents}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstClass">First Class Students</Label>
-                      <Input
-                        id="firstClass"
-                        name="firstClass"
-                        type="number"
-                        value={formData.firstClass}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="distinction">Distinction Students</Label>
-                      <Input
-                        id="distinction"
-                        name="distinction"
-                        type="number"
-                        value={formData.distinction}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <Label className="text-base font-semibold">Subject Wise</Label>
-                  <div className="rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Subject</TableHead>
-                          <TableHead>Total Out Of</TableHead>
-                          <TableHead>Highest Score</TableHead>
-                          <TableHead>Pass %</TableHead>
-                          <TableHead>Avg Marks</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {subjects.map((subject, index) => (
-                          <TableRow key={subject.subject}>
-                            <TableCell className="font-medium">{subject.subject}</TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={subject.totalOutOf}
-                                onChange={(e) =>
-                                  handleSubjectChange(index, 'totalOutOf', e.target.value)
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={subject.highestScore}
-                                onChange={(e) =>
-                                  handleSubjectChange(index, 'highestScore', e.target.value)
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={subject.passPercentage}
-                                onChange={(e) =>
-                                  handleSubjectChange(index, 'passPercentage', e.target.value)
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={subject.avgMarks}
-                                onChange={(e) =>
-                                  handleSubjectChange(index, 'avgMarks', e.target.value)
-                                }
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {['NEET', 'JEE', 'KCET'].includes(resultType) && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="totalAppeared">Total Appeared</Label>
-                    <Input
-                      id="totalAppeared"
-                      name="totalAppeared"
-                      type="number"
-                      value={formData.totalAppeared}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="totalQualified">Total Qualified</Label>
-                    <Input
-                      id="totalQualified"
-                      name="totalQualified"
-                      type="number"
-                      value={formData.totalQualified}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="topScore">Top Score</Label>
-                    <Input
-                      id="topScore"
-                      name="topScore"
-                      type="number"
-                      step="0.01"
-                      value={formData.topScore}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="topperName">Topper Name</Label>
-                    <Input
-                      id="topperName"
-                      name="topperName"
-                      value={formData.topperName}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    placeholder="Add any additional information..."
-                    rows="4"
-                  />
-                </div>
-              </>
-            )}
-
-            <DialogFooter>
+            <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : editingId ? 'Update Result' : 'Create Result'}
+                {loading ? 'Saving...' : 'Save'}
               </Button>
-            </DialogFooter>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Competitive Result Dialog */}
+      <Dialog
+        open={openDialog && activeTab !== 'board'}
+        onOpenChange={handleCloseDialog}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? 'Edit Result' : 'Add Result'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCompetitiveSubmit} className="space-y-4">
+            <div>
+              <Label>Year</Label>
+              <Select
+                value={competitiveFormData.year.toString()}
+                onValueChange={(value) =>
+                  setCompetitiveFormData(prev => ({ ...prev, year: parseInt(value) }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {YEARS.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Total Appeared</Label>
+              <Input
+                type="number"
+                name="totalAppeared"
+                value={competitiveFormData.totalAppeared}
+                onChange={handleCompetitiveInputChange}
+              />
+            </div>
+            <div>
+              <Label>Total Qualified</Label>
+              <Input
+                type="number"
+                name="totalQualified"
+                value={competitiveFormData.totalQualified}
+                onChange={handleCompetitiveInputChange}
+              />
+            </div>
+            <div>
+              <Label>Highest Score</Label>
+              <Input
+                type="number"
+                name="highestScore"
+                value={competitiveFormData.highestScore}
+                onChange={handleCompetitiveInputChange}
+              />
+            </div>
+            <div>
+              <Label>Description (Optional)</Label>
+              <Input
+                type="text"
+                name="description"
+                value={competitiveFormData.description}
+                onChange={handleCompetitiveInputChange}
+                placeholder="Add any additional information"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -715,5 +735,4 @@ const ManageResults = () => {
 };
 
 export default ManageResults;
-
 export { ManageResults };
