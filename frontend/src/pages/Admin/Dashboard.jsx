@@ -12,6 +12,8 @@ const statCards = [
 ];
 
 const quickActions = [
+  { label: 'Site Settings', href: '/admin/site-settings' },
+  { label: 'Manage Carousel', href: '/admin/manage-carousel' },
   { label: 'Manage Events', href: '/admin/manage-events' },
   { label: 'Manage Results', href: '/admin/manage-results' },
   { label: 'Manage Toppers', href: '/admin/manage-toppers' },
@@ -71,7 +73,7 @@ export function AdminDashboard() {
         {/* Quick Actions */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickActions.map((action) => (
               <Link key={action.href} to={action.href}>
                 <Button variant="outline" className="w-full justify-start">

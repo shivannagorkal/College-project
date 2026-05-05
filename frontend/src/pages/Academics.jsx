@@ -10,7 +10,7 @@ export function Academics() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <PageHeader title="Academics" subtitle="Explore our academic programs and subjects" />
+      <PageHeader title="Academics" page="academics" subtitle="Explore our academic programs and subjects" />
 
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

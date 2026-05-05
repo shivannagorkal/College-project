@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin } from 'lucide-react';
+import { FaFacebook as Facebook, FaInstagram as Instagram, FaYoutube as Youtube } from 'react-icons/fa';
 import {
   COLLEGE_NAME,
   COLLEGE_LOCATION,
@@ -8,9 +10,33 @@ import {
   COLLEGE_FOUNDED,
   NAV_LINKS,
 } from '@/utils/constants';
+import { siteSettingsService } from '@/services/siteSettingsService';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const [settings, setSettings] = useState({
+    collegeName: COLLEGE_NAME,
+    address: COLLEGE_LOCATION,
+    phone: COLLEGE_PHONE,
+    email: COLLEGE_EMAIL,
+    foundedYear: COLLEGE_FOUNDED,
+    facebook: '',
+    instagram: '',
+    youtube: '',
+    tagline: '',
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await siteSettingsService.getSettings();
+        setSettings(prev => ({ ...prev, ...data }));
+      } catch (err) {
+        console.error('Failed to fetch settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   return (
     <footer className="bg-secondary-foreground text-secondary mt-16">
@@ -18,11 +44,11 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* College Info */}
           <div>
-            <h3 className="font-bold text-lg mb-4 text-primary">{COLLEGE_NAME}</h3>
+            <h3 className="font-bold text-lg mb-4 text-primary">{settings.collegeName}</h3>
             <p className="text-sm text-gray-600 mb-4">
-              One of the top PU colleges in Koppala district, offering quality education in Science and Commerce streams.
+              {settings.tagline || 'One of the top PU colleges in Koppala district, offering quality education in Science and Commerce streams.'}
             </p>
-            <p className="text-xs text-gray-500">Established in {COLLEGE_FOUNDED}</p>
+            <p className="text-xs text-gray-500">Established in {settings.foundedYear}</p>
           </div>
 
           {/* Quick Links */}
@@ -45,27 +71,46 @@ export function Footer() {
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 mt-1 text-primary shrink-0" />
-                <span>{COLLEGE_LOCATION}</span>
+                <span>{settings.address}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-primary" />
-                <a href={`tel:${COLLEGE_PHONE}`} className="hover:text-primary transition">
-                  {COLLEGE_PHONE}
+                <a href={`tel:${settings.phone}`} className="hover:text-primary transition">
+                  {settings.phone}
                 </a>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-primary" />
-                <a href={`mailto:${COLLEGE_EMAIL}`} className="hover:text-primary transition">
-                  {COLLEGE_EMAIL}
+                <a href={`mailto:${settings.email}`} className="hover:text-primary transition">
+                  {settings.email}
                 </a>
               </div>
+            </div>
+
+            {/* Social Media Links */}
+            <div className="flex gap-4 mt-4">
+              {settings.facebook && (
+                <a href={settings.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition">
+                  <Facebook className="w-5 h-5" />
+                </a>
+              )}
+              {settings.instagram && (
+                <a href={settings.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition">
+                  <Instagram className="w-5 h-5" />
+                </a>
+              )}
+              {settings.youtube && (
+                <a href={settings.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition">
+                  <Youtube className="w-5 h-5" />
+                </a>
+              )}
             </div>
           </div>
         </div>
 
         <div className="border-t border-gray-300 pt-6 text-center text-sm text-gray-600">
           <p>
-            Copyright {COLLEGE_FOUNDED} - {currentYear} {COLLEGE_NAME}. All rights reserved.
+            Copyright © {settings.foundedYear} - {currentYear} {settings.collegeName}. All rights reserved.
           </p>
         </div>
       </div>

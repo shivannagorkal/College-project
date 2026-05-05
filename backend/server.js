@@ -18,6 +18,8 @@ import facultyRoutes from './routes/facultyRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
 import admissionRoutes from './routes/admissionRoutes.js';
 import historyRoutes from './routes/historyRoutes.js';
+import siteSettingsRoutes from './routes/siteSettingsRoutes.js';
+import carouselRoutes from './routes/carouselRoutes.js';
 
 // Initialize Express app
 const app = express();
@@ -58,6 +60,8 @@ app.use('/api/faculty', facultyRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/admissions', admissionRoutes);
 app.use('/api/history', historyRoutes);
+app.use('/api/settings', siteSettingsRoutes);
+app.use('/api/carousel', carouselRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

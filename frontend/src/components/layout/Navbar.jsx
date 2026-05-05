@@ -1,20 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { COLLEGE_SHORT_NAME, NAV_LINKS } from '@/utils/constants';
 import { useAuth } from '@/hooks/useAuth';
+import { siteSettingsService } from '@/services/siteSettingsService';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [collegeName, setCollegeName] = useState(COLLEGE_SHORT_NAME);
   const location = useLocation();
   const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await siteSettingsService.getSettings();
+        if (data.collegeName) {
+          setCollegeName(data.collegeName);
+        }
+      } catch (err) {
+        console.error('Failed to fetch settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const isActive = (href) => location.pathname === href;
 
   return (
-    <nav className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-lg rounded-b-md">
+    <nav className="sticky top-0 z-50 bg-primary text-primary-foreground shadow-lg shadow-primary/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and College Name */}
@@ -22,7 +38,7 @@ export function Navbar() {
             <div className="w-10 h-10 bg-primary-foreground rounded-full flex items-center justify-center text-primary font-bold">
               AK
             </div>
-            <span className="hidden sm:inline">{COLLEGE_SHORT_NAME}</span>
+            <span className="hidden sm:inline truncate"> AKRD </span>
           </Link>
 
           {/* Desktop Menu */}

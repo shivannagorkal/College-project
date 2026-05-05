@@ -24,6 +24,8 @@ import { ManageGallery } from '@/pages/Admin/ManageGallery';
 import { ManageToppers } from '@/pages/Admin/ManageToppers';
 import { ManageFaculty } from '@/pages/Admin/ManageFaculty';
 import { ManageAnnouncements } from '@/pages/Admin/ManageAnnouncements';
+import { SiteSettings } from '@/pages/Admin/SiteSettings';
+import { ManageCarousel } from '@/pages/Admin/ManageCarousel';
 
 export const router = createBrowserRouter([
   // Public routes
@@ -95,6 +97,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <ManageAnnouncements />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/site-settings',
+    element: (
+      <ProtectedRoute>
+        <SiteSettings />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/manage-carousel',
+    element: (
+      <ProtectedRoute>
+        <ManageCarousel />
       </ProtectedRoute>
     ),
   },

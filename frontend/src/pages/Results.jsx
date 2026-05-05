@@ -44,21 +44,28 @@ export function Results() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-//    const [searchQuery, setSearchQuery] = useState('');
-//    const [searchedStudent, setSearchedStudent] = useState(null);
-//    const [searchClicked, setSearchClicked] = useState(false);
+  // Search state
 
-// const handleSearch = () => {
-//   setSearchClicked(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchedStudent, setSearchedStudent] = useState(null);
+  const [searchClicked, setSearchClicked] = useState(false);
 
-//   const found = boardResults.find(
-//     (r) =>
-//       r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-//       r.rollNo?.toString() === searchQuery
-//   );
+  const handleSearch = () => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return;
 
-//   setSearchedStudent(found || null);
-// };
+    setSearchClicked(true);
+
+    const found = yearBoardResults.find(
+      (r) =>
+        r.name?.toLowerCase().includes(query) ||
+        r.rollNo?.toString().trim() === query
+    );
+
+    setSearchedStudent(found || null);
+  };
+
+  // Fetch results and toppers on mount
 
   useEffect(() => {
     const fetchData = async () => {
@@ -147,7 +154,7 @@ export function Results() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <PageHeader title="Results" subtitle="View examination results by year and type" />
+      <PageHeader title="Results" page="results" subtitle="View examination results by year and type" />
 
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -175,7 +182,8 @@ export function Results() {
             </Select>
           </div>
 
-{/* 🔍 Result Search Section
+{/* 🔍 Result Search Section */}
+
 <Card className="mb-8 max-w-2xl mx-auto">
   <CardHeader>
     <CardTitle className="text-center text-xl font-bold">
@@ -187,10 +195,11 @@ export function Results() {
   </CardHeader>
 
   <CardContent>
-    {/* Search Input 
     <div className="flex gap-2 mb-6">
       <input
         type="text"
+        id="student-search"
+        name="studentSearch"
         placeholder="Search by name or roll no..."
         className="flex-1 border rounded-md px-3 py-2"
         value={searchQuery}
@@ -204,7 +213,6 @@ export function Results() {
       </button>
     </div>
 
-    {/* Result Display 
     {searchedStudent && (
       <div className="border rounded-lg p-4 shadow-sm">
         <div className="flex justify-between items-center mb-4">
@@ -225,7 +233,6 @@ export function Results() {
           </div>
         </div>
 
-        {/* Marks Table 
         <Table>
           <TableHeader>
             <TableRow>
@@ -237,7 +244,7 @@ export function Results() {
           </TableHeader>
 
           <TableBody>
-            {searchedStudent.subjects.map((sub, i) => (
+            {(searchedStudent.subjects || []).map((sub, i) => (
               <TableRow key={i}>
                 <TableCell>{sub.name}</TableCell>
                 <TableCell>{sub.marks}</TableCell>
@@ -250,7 +257,6 @@ export function Results() {
               </TableRow>
             ))}
 
-            {/* Total Row 
             <TableRow className="font-bold">
               <TableCell>Total</TableCell>
               <TableCell>{searchedStudent.total}</TableCell>
@@ -268,14 +274,16 @@ export function Results() {
       </div>
     )}
 
-    {/* No Result 
+    {/* No Result Found */}
     {searchClicked && !searchedStudent && (
       <p className="text-center text-red-500 mt-4">
         No result found
       </p>
     )}
   </CardContent>
-</Card> */}
+</Card> 
+
+{/* *Tooper Section*  */}
 
           {!loading && !error && sortedToppers.length > 0 && (
             <Card className="mb-8">

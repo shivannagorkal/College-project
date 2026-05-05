@@ -9,7 +9,7 @@ export function About() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <PageHeader title="About Us" subtitle="Know more about our institution" />
+      <PageHeader title="About Us" page="about" subtitle="Know more about our institution" />
 
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

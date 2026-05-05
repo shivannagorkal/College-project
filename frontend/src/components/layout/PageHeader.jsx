@@ -1,10 +1,16 @@
-export function PageHeader({ title, subtitle }) {
+import { PageCarousel } from '@/components/shared/PageCarousel';
+
+export function PageHeader({ title, subtitle, page }) {
   return (
-    <div className="bg-primary text-primary-foreground py-12 md:py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">{title}</h1>
-        {subtitle && <p className="text-lg opacity-90">{subtitle}</p>}
+    <PageCarousel page={page} height="280px">
+      <div className="text-center text-white px-4">
+        <h1 className="text-4xl md:text-5xl font-bold mb-3">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="text-lg text-white/90">{subtitle}</p>
+        )}
       </div>
-    </div>
+    </PageCarousel>
   );
 }
