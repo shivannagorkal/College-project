@@ -20,6 +20,7 @@ import admissionRoutes from './routes/admissionRoutes.js';
 import historyRoutes from './routes/historyRoutes.js';
 import siteSettingsRoutes from './routes/siteSettingsRoutes.js';
 import carouselRoutes from './routes/carouselRoutes.js';
+import studentsResultRoutes from './routes/studentsResultRoutes.js';
 
 // Initialize Express app
 const app = express();
@@ -62,7 +63,7 @@ app.use('/api/admissions', admissionRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/settings', siteSettingsRoutes);
 app.use('/api/carousel', carouselRoutes);
-
+app.use('/api/students-results', studentsResultRoutes);
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

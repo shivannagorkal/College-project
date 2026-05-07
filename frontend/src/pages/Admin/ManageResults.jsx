@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, {
+  useEffect,
+  useState
+} from 'react';
+
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+import {
+  Card,
+  CardContent
+} from '@/components/ui/card';
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+
 import {
   Table,
   TableBody,
@@ -24,715 +25,867 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit2, Trash2, Plus } from 'lucide-react';
-import { boardResultService } from '@/services/boardResultService';
-import { competitiveResultService } from '@/services/competitiveResultService';
 
-const YEARS = Array.from({ length: 20 }, (_, i) =>
-  new Date().getFullYear() - i
+import { Input } from '@/components/ui/input';
+
+import { Label } from '@/components/ui/label';
+
+import {
+  Edit2,
+  Trash2,
+  Plus
+} from 'lucide-react';
+
+import {
+  StudentsResultService
+} from '@/services/StudentsResultService';
+
+
+const YEARS = Array.from(
+  { length: 10 },
+  (_, i) => new Date().getFullYear() - i
 );
 
-const PCMB = ['Kannada', 'English', 'Physics', 'Chemistry', 'Mathematics', 'Biology'];
-const PCMC = ['Kannada', 'English', 'Physics', 'Chemistry', 'Mathematics', 'Computer Science'];
-const COMMERCE = ['Kannada', 'English', 'Business Studies', 'Accountancy', 'Economics', 'Statistics'];
 
-const getSubjects = (stream, group) => {
-  let list = [];
-  if (stream === 'Science') {
-    list = group === 'PCMB' ? PCMB : PCMC;
-  } else {
-    list = COMMERCE;
-  }
-  return list.map((subject) => ({
-    subject,
-    totalOutOf: 100,
-    highestScore: 0,
-    passPercentage: 0,
-  }));
+const sectionSubjects = {
+
+  PCMB: [
+    'Kannada',
+    'English',
+    'Physics',
+    'Chemistry',
+    'Mathematics',
+    'Biology'
+  ],
+
+  PCMC: [
+    'Kannada',
+    'English',
+    'Physics',
+    'Chemistry',
+    'Mathematics',
+    'Computer Science'
+  ],
+
+  SEBA: [
+    'Kannada',
+    'English',
+    'Statistics',
+    'Economics',
+    'Business Studies',
+    'Accountancy'
+  ],
+
+  CEBA: [
+    'Kannada',
+    'English',
+    'Computer Science',
+    'Economics',
+    'Business Studies',
+    'Accountancy'
+  ]
 };
 
+
 const ManageResults = () => {
-  const [boardResults, setBoardResults] = useState([]);
-  const [competitiveResults, setCompetitiveResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [activeTab, setActiveTab] = useState('board');
-  const [subjects, setSubjects] = useState([]);
 
-  const [boardFormData, setBoardFormData] = useState({
-    year: new Date().getFullYear(),
-    stream: 'Science',
-    className: 'PCMB',
-    highestPercentageInStream: '',
-    totalStudents: '',
-    passedStudents: '',
-    firstClass: '',
-    distinction: '',
-    subjects: [],
-  });
+  const [results, setResults] = useState([]);
 
-  const [competitiveFormData, setCompetitiveFormData] = useState({
-    year: new Date().getFullYear(),
-    resultType: 'NEET',
-    totalAppeared: '',
-    totalQualified: '',
-    highestScore: '',
-    description: '',
-  });
+  const [loading, setLoading] =
+    useState(false);
 
-  const fetchBoardResults = async () => {
-    try {
-      setLoading(true);
-      const data = await boardResultService.getBoardResults();
-      setBoardResults(data);
-    } catch (error) {
-      console.error('Error fetching board results:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [openDialog, setOpenDialog] =
+    useState(false);
 
-  const fetchCompetitiveResults = async () => {
-    try {
-      setLoading(true);
-      const data = await competitiveResultService.getCompetitiveResults();
-      setCompetitiveResults(data);
-    } catch (error) {
-      console.error('Error fetching competitive results:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [editingId, setEditingId] =
+    useState(null);
 
-  useEffect(() => {
-    if (activeTab === 'board') {
-      fetchBoardResults();
-    } else {
-      fetchCompetitiveResults();
-    }
-  }, [activeTab]);
+  const [successMessage, setSuccessMessage] =
+    useState('');
 
-  useEffect(() => {
-    const newSubjects = getSubjects(boardFormData.stream, boardFormData.className);
-    setSubjects(newSubjects);
-    setBoardFormData(prev => ({ ...prev, subjects: newSubjects }));
-  }, [boardFormData.stream, boardFormData.className]);
 
-  const handleBoardInputChange = (e) => {
-    const { name, value } = e.target;
-    setBoardFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const [formData, setFormData] =
+    useState({
 
-  const handleCompetitiveInputChange = (e) => {
-    const { name, value } = e.target;
-    setCompetitiveFormData(prev => ({ ...prev, [name]: value }));
-  };
+      studentImage: null,
 
-  const handleSubjectChange = (index, field, value) => {
-    const newSubjects = [...subjects];
-    newSubjects[index] = { ...newSubjects[index], [field]: value };
-    setSubjects(newSubjects);
-    setBoardFormData(prev => ({ ...prev, subjects: newSubjects }));
-  };
+      studentName: '',
 
-  const handleBoardSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      const data = {
-        ...boardFormData,
-        year: Number(boardFormData.year),
-        totalStudents: Number(boardFormData.totalStudents || 0),
-        passedStudents: Number(boardFormData.passedStudents || 0),
-        firstClass: Number(boardFormData.firstClass || 0),
-        distinction: Number(boardFormData.distinction || 0),
-        highestPercentageInStream: Number(boardFormData.highestPercentageInStream || 0),
-        subjects: JSON.stringify(boardFormData.subjects),
-      };
+      rollNo: '',
 
-      if (editingId) {
-        await boardResultService.updateBoardResult(editingId, data);
-      } else {
-        await boardResultService.createBoardResult(data);
-      }
-      setSuccessMessage('Board result saved successfully');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      setOpenDialog(false);
-      resetBoardForm();
-      fetchBoardResults();
-    } catch (error) {
-      console.error('Error saving board result:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCompetitiveSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      const data = {
-        ...competitiveFormData,
-        year: Number(competitiveFormData.year),
-        totalAppeared: Number(competitiveFormData.totalAppeared || 0),
-        totalQualified: Number(competitiveFormData.totalQualified || 0),
-        highestScore: Number(competitiveFormData.highestScore || 0),
-      };
-
-      if (editingId) {
-        await competitiveResultService.updateCompetitiveResult(editingId, data);
-      } else {
-        await competitiveResultService.createCompetitiveResult(data);
-      }
-      setSuccessMessage('Result saved successfully');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      setOpenDialog(false);
-      resetCompetitiveForm();
-      fetchCompetitiveResults();
-    } catch (error) {
-      console.error('Error saving competitive result:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetBoardForm = () => {
-    setBoardFormData({
       year: new Date().getFullYear(),
+
       stream: 'Science',
-      className: 'PCMB',
-      highestPercentageInStream: '',
-      totalStudents: '',
-      passedStudents: '',
-      firstClass: '',
-      distinction: '',
-      subjects: getSubjects('Science', 'PCMB'),
+
+      section: 'PCMB',
+
+      subjects: {}
     });
-    setEditingId(null);
+
+
+  // FETCH RESULTS
+  const fetchResults = async () => {
+
+    try {
+
+      setLoading(true);
+
+      const data =
+        await StudentsResultService
+          .getStudentsResult();
+
+      setResults(data);
+
+    } catch (error) {
+
+      console.error(error);
+
+    } finally {
+
+      setLoading(false);
+    }
   };
 
-  const resetCompetitiveForm = () => {
-    setCompetitiveFormData({
-      year: new Date().getFullYear(),
-      resultType: 'NEET',
-      totalAppeared: '',
-      totalQualified: '',
-      highestScore: '',
-      description: '',
+
+  useEffect(() => {
+
+    fetchResults();
+
+  }, []);
+
+
+  // AUTO SUBJECTS
+  useEffect(() => {
+
+  const subjectsList =
+    sectionSubjects[formData.section] || [];
+
+  setFormData((prev) => {
+
+    const updatedSubjects = {};
+
+    subjectsList.forEach((subject) => {
+
+      updatedSubjects[subject] =
+
+        prev.subjects?.[subject]
+
+        ||
+
+        {
+          theory: 0,
+          practical: 0
+        };
     });
-    setEditingId(null);
+
+    return {
+      ...prev,
+      subjects: updatedSubjects
+    };
+  });
+
+}, [formData.section]);
+
+
+  // INPUT CHANGE
+  const handleChange = (e) => {
+
+    const { name, value, files } = e.target;
+
+    if (name === 'studentImage') {
+
+      setFormData((prev) => ({
+        ...prev,
+        studentImage: files[0]
+      }));
+
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const handleAddBoardResult = () => {
-    resetBoardForm();
-    setEditingId(null);
-    setOpenDialog(true);
+
+  // SUBJECT CHANGE
+  const handleSubjectChange = (
+    subject,
+    field,
+    value
+  ) => {
+
+    setFormData((prev) => ({
+
+      ...prev,
+
+      subjects: {
+
+        ...prev.subjects,
+
+        [subject]: {
+
+          ...prev.subjects[subject],
+
+          [field]: value
+        }
+      }
+    }));
   };
 
-  const handleAddCompetitiveResult = (type) => {
-    resetCompetitiveForm();
-    setCompetitiveFormData(prev => ({ ...prev, resultType: type }));
-    setEditingId(null);
-    setOpenDialog(true);
-  };
 
-  const handleEditBoardResult = (result) => {
-    setBoardFormData({
-      year: result.year,
-      stream: result.stream,
-      className: result.className,
-      highestPercentageInStream: result.highestPercentageInStream,
-      totalStudents: result.totalStudents,
-      passedStudents: result.passedStudents,
-      firstClass: result.firstClass,
-      distinction: result.distinction,
-      subjects: result.subjects || [],
-    });
-    setSubjects(result.subjects || []);
-    setEditingId(result._id);
-    setOpenDialog(true);
-  };
+  // SUBMIT
+const handleSubmit = async (e) => {
 
-  const handleEditCompetitiveResult = (result) => {
-    setCompetitiveFormData({
-      year: result.year,
-      resultType: result.resultType,
-      totalAppeared: result.totalAppeared,
-      totalQualified: result.totalQualified,
-      highestScore: result.highestScore,
-      description: result.description,
-    });
-    setEditingId(result._id);
-    setOpenDialog(true);
-  };
+  e.preventDefault();
 
-  const handleCloseDialog = () => {
+  try {
+
+    setLoading(true);
+
+    const cleanedSubjects = {};
+
+    Object.keys(formData.subjects)
+      .forEach((subject) => {
+
+        cleanedSubjects[subject] = {
+
+          theory: Number(
+            formData.subjects[subject]
+              .theory || 0
+          ),
+
+          practical: Number(
+            formData.subjects[subject]
+              .practical || 0
+          )
+        };
+      });
+
+    const submitData = {
+
+      ...formData,
+
+      rollNo: Number(formData.rollNo),
+
+      year: Number(formData.year),
+
+      subjects: cleanedSubjects
+    };
+
+    if (editingId) {
+
+      await StudentsResultService
+        .updateStudentsResult(
+          editingId,
+          submitData
+        );
+
+    } else {
+
+      await StudentsResultService
+        .createStudentsResult(
+          submitData
+        );
+    }
+
+    setSuccessMessage(
+      'Saved Successfully'
+    );
+
+    setTimeout(() => {
+
+      setSuccessMessage('');
+
+    }, 3000);
+
     setOpenDialog(false);
+
+    resetForm();
+
+    fetchResults();
+
+  } catch (error) {
+
+    console.error(error);
+
+  } finally {
+
+    setLoading(false);
+  }
+};
+
+
+  // DELETE
+  const handleDelete = async (id) => {
+
+    if (
+      window.confirm(
+        'Delete this result?'
+      )
+    ) {
+
+      await StudentsResultService
+        .deleteStudentsResult(id);
+
+      fetchResults();
+    }
+  };
+
+
+  // EDIT
+  const handleEdit = (result) => {
+
+    setEditingId(result._id);
+
+    setFormData({
+
+      studentImage: null,
+
+      studentName:
+        result.studentName,
+
+      rollNo:
+        result.rollNo,
+
+      year:
+        result.year,
+
+      stream:
+        result.stream,
+
+      section:
+        result.section,
+
+      subjects:
+        result.subjects || {}
+    });
+
+    setOpenDialog(true);
+  };
+
+
+  // RESET
+  const resetForm = () => {
+
     setEditingId(null);
+
+    setFormData({
+
+      studentImage: null,
+
+      studentName: '',
+
+      rollNo: '',
+
+      year:
+        new Date().getFullYear(),
+
+      stream: 'Science',
+
+      section: 'PCMB',
+
+      subjects: {}
+    });
   };
 
-  const handleDeleteBoardResult = async (id) => {
-    if (window.confirm('Are you sure you want to delete this result?')) {
-      try {
-        await boardResultService.deleteBoardResult(id);
-        setSuccessMessage('Result deleted successfully');
-        setTimeout(() => setSuccessMessage(''), 3000);
-        fetchBoardResults();
-      } catch (error) {
-        console.error('Error deleting result:', error);
-      }
-    }
-  };
-
-  const handleDeleteCompetitiveResult = async (id) => {
-    if (window.confirm('Are you sure you want to delete this result?')) {
-      try {
-        await competitiveResultService.deleteCompetitiveResult(id);
-        setSuccessMessage('Result deleted successfully');
-        setTimeout(() => setSuccessMessage(''), 3000);
-        fetchCompetitiveResults();
-      } catch (error) {
-        console.error('Error deleting result:', error);
-      }
-    }
-  };
-
-  const BoardResultTable = ({ data }) => (
-    <div className="rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Year</TableHead>
-            <TableHead>Stream</TableHead>
-            <TableHead>Group</TableHead>
-            <TableHead>Total Students</TableHead>
-            <TableHead>Passed</TableHead>
-            <TableHead>Pass %</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan="7" className="text-center text-gray-500 py-4">
-                No board results available
-              </TableCell>
-            </TableRow>
-          ) : (
-            data.map((result) => (
-              <TableRow key={result._id}>
-                <TableCell>{result.year}</TableCell>
-                <TableCell>{result.stream}</TableCell>
-                <TableCell>{result.className}</TableCell>
-                <TableCell>{result.totalStudents}</TableCell>
-                <TableCell>{result.passedStudents}</TableCell>
-                <TableCell>{result.passPercentage}%</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditBoardResult(result)}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteBoardResult(result._id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
-
-  const CompetitiveResultTable = ({ data, type }) => (
-    <div className="rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Year</TableHead>
-            <TableHead>Total Appeared</TableHead>
-            <TableHead>Qualified</TableHead>
-            <TableHead>Qualified %</TableHead>
-            <TableHead>Highest Score</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan="6" className="text-center text-gray-500 py-4">
-                No {type} results available
-              </TableCell>
-            </TableRow>
-          ) : (
-            data.map((result) => (
-              <TableRow key={result._id}>
-                <TableCell>{result.year}</TableCell>
-                <TableCell>{result.totalAppeared}</TableCell>
-                <TableCell>{result.totalQualified}</TableCell>
-                <TableCell>{result.qualifiedPercentage}%</TableCell>
-                <TableCell>{result.highestScore}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditCompetitiveResult(result)}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteCompetitiveResult(result._id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
 
   return (
+
     <div className="space-y-6">
+
+
       {successMessage && (
-        <Card className="bg-green-50 border-green-200">
+
+        <Card className="bg-green-50">
+
           <CardContent className="pt-6">
-            <p className="text-green-600">{successMessage}</p>
+
+            {successMessage}
+
           </CardContent>
+
         </Card>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="board">Board Results</TabsTrigger>
-          <TabsTrigger value="neet">NEET</TabsTrigger>
-          <TabsTrigger value="jee">JEE</TabsTrigger>
-          <TabsTrigger value="kcet">KCET</TabsTrigger>
-        </TabsList>
 
-        <TabsContent value="board" className="mt-6 space-y-4">
-          <Button onClick={handleAddBoardResult} className="mb-4">
-            <Plus className="w-4 h-4 mr-2" /> Add Board Result
-          </Button>
-          <BoardResultTable data={boardResults} />
-        </TabsContent>
+      <Button
+        onClick={() => {
 
-        <TabsContent value="neet" className="mt-6 space-y-4">
-          <Button onClick={() => handleAddCompetitiveResult('NEET')} className="mb-4">
-            <Plus className="w-4 h-4 mr-2" /> Add NEET Result
-          </Button>
-          <CompetitiveResultTable
-            data={competitiveResults.filter(r => r.resultType === 'NEET')}
-            type="NEET"
-          />
-        </TabsContent>
+          resetForm();
 
-        <TabsContent value="jee" className="mt-6 space-y-4">
-          <Button onClick={() => handleAddCompetitiveResult('JEE')} className="mb-4">
-            <Plus className="w-4 h-4 mr-2" /> Add JEE Result
-          </Button>
-          <CompetitiveResultTable
-            data={competitiveResults.filter(r => r.resultType === 'JEE')}
-            type="JEE"
-          />
-        </TabsContent>
-
-        <TabsContent value="kcet" className="mt-6 space-y-4">
-          <Button onClick={() => handleAddCompetitiveResult('KCET')} className="mb-4">
-            <Plus className="w-4 h-4 mr-2" /> Add KCET Result
-          </Button>
-          <CompetitiveResultTable
-            data={competitiveResults.filter(r => r.resultType === 'KCET')}
-            type="KCET"
-          />
-        </TabsContent>
-      </Tabs>
-
-      {/* Board Result Dialog */}
-      <Dialog open={openDialog && activeTab === 'board'} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl max-h-96 overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingId ? 'Edit Board Result' : 'Add Board Result'}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleBoardSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Year</Label>
-                <Select
-                  value={boardFormData.year.toString()}
-                  onValueChange={(value) =>
-                    setBoardFormData(prev => ({ ...prev, year: parseInt(value) }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {YEARS.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Stream</Label>
-                <Select
-                  value={boardFormData.stream}
-                  onValueChange={(value) =>
-                    setBoardFormData(prev => ({
-                      ...prev,
-                      stream: value,
-                      className: value === 'Commerce' ? 'Commerce' : 'PCMB',
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Science">Science</SelectItem>
-                    <SelectItem value="Commerce">Commerce</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {boardFormData.stream === 'Science' && (
-                <div>
-                  <Label>Group</Label>
-                  <Select
-                    value={boardFormData.className}
-                    onValueChange={(value) =>
-                      setBoardFormData(prev => ({ ...prev, className: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PCMB">PCMB</SelectItem>
-                      <SelectItem value="PCMC">PCMC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div>
-                <Label>Highest % in Stream</Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  name="highestPercentageInStream"
-                  value={boardFormData.highestPercentageInStream}
-                  onChange={handleBoardInputChange}
-                />
-              </div>
-              <div>
-                <Label>Total Students</Label>
-                <Input
-                  type="number"
-                  name="totalStudents"
-                  value={boardFormData.totalStudents}
-                  onChange={handleBoardInputChange}
-                />
-              </div>
-              <div>
-                <Label>Passed Students</Label>
-                <Input
-                  type="number"
-                  name="passedStudents"
-                  value={boardFormData.passedStudents}
-                  onChange={handleBoardInputChange}
-                />
-              </div>
-              <div>
-                <Label>First Class Students</Label>
-                <Input
-                  type="number"
-                  name="firstClass"
-                  value={boardFormData.firstClass}
-                  onChange={handleBoardInputChange}
-                />
-              </div>
-              <div>
-                <Label>Distinction Students</Label>
-                <Input
-                  type="number"
-                  name="distinction"
-                  value={boardFormData.distinction}
-                  onChange={handleBoardInputChange}
-                />
-              </div>
-            </div>
-
-            <div className="border-t pt-4 mt-4">
-              <h3 className="font-semibold mb-3">Subject wise Performance</h3>
-              <div className="rounded-lg border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Subject</TableHead>
-                      <TableHead>Total Out Of</TableHead>
-                      <TableHead>Highest Score</TableHead>
-                      <TableHead>Pass %</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {subjects.map((sub, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{sub.subject}</TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={sub.totalOutOf}
-                            onChange={(e) =>
-                              handleSubjectChange(index, 'totalOutOf', e.target.value)
-                            }
-                            className="w-20"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={sub.highestScore}
-                            onChange={(e) =>
-                              handleSubjectChange(index, 'highestScore', e.target.value)
-                            }
-                            className="w-20"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={sub.passPercentage}
-                            onChange={(e) =>
-                              handleSubjectChange(index, 'passPercentage', e.target.value)
-                            }
-                            className="w-20"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Competitive Result Dialog */}
-      <Dialog
-        open={openDialog && activeTab !== 'board'}
-        onOpenChange={handleCloseDialog}
+          setOpenDialog(true);
+        }}
       >
-        <DialogContent className="max-w-md">
+
+        <Plus className="w-4 h-4 mr-2" />
+
+        Add Student Result
+
+      </Button>
+
+
+      {/* TABLE */}
+
+      <div className="rounded-lg border">
+
+        <Table>
+
+          <TableHeader>
+
+            <TableRow>
+
+              <TableHead>
+                Image
+              </TableHead>
+
+              <TableHead>
+                Name
+              </TableHead>
+
+              <TableHead>
+                Roll No
+              </TableHead>
+
+              <TableHead>
+                Year
+              </TableHead>
+
+              <TableHead>
+                Stream
+              </TableHead>
+
+              <TableHead>
+                Section
+              </TableHead>
+
+              <TableHead>
+                Percentage
+              </TableHead>
+
+              <TableHead>
+                Actions
+              </TableHead>
+
+            </TableRow>
+
+          </TableHeader>
+
+
+          <TableBody>
+
+            {results.map((result) => (
+
+              <TableRow key={result._id}>
+
+                <TableCell>
+
+                  <img
+                    src={result.studentImage}
+                    alt=""
+                    className="w-12 h-12 rounded object-cover"
+                  />
+
+                </TableCell>
+
+                <TableCell>
+                  {result.studentName}
+                </TableCell>
+
+                <TableCell>
+                  {result.rollNo}
+                </TableCell>
+
+                <TableCell>
+                  {result.year}
+                </TableCell>
+
+                <TableCell>
+                  {result.stream}
+                </TableCell>
+
+                <TableCell>
+                  {result.section}
+                </TableCell>
+
+                <TableCell>
+                  {result.percentage}%
+                </TableCell>
+
+                <TableCell>
+
+                  <div className="flex gap-2">
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        handleEdit(result)
+                      }
+                    >
+
+                      <Edit2 className="w-4 h-4" />
+
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        handleDelete(
+                          result._id
+                        )
+                      }
+                    >
+
+                      <Trash2 className="w-4 h-4" />
+
+                    </Button>
+
+                  </div>
+
+                </TableCell>
+
+              </TableRow>
+
+            ))}
+
+          </TableBody>
+
+        </Table>
+
+      </div>
+
+
+      {/* DIALOG */}
+
+      <Dialog
+        open={openDialog}
+        onOpenChange={setOpenDialog}
+      >
+
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+
           <DialogHeader>
+
             <DialogTitle>
-              {editingId ? 'Edit Result' : 'Add Result'}
+
+              {editingId
+                ? 'Edit Result'
+                : 'Add Result'}
+
             </DialogTitle>
+
           </DialogHeader>
-          <form onSubmit={handleCompetitiveSubmit} className="space-y-4">
+
+
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+          >
+
+
+            {/* BASIC */}
+
+            <div className="grid grid-cols-2 gap-4">
+
+
+              <div>
+
+                <Label>
+                  Student Image
+                </Label>
+
+                <Input
+                  type="file"
+                  name="studentImage"
+                  accept="image/*"
+                  onChange={handleChange}
+                />
+
+              </div>
+
+
+              <div>
+
+                <Label>
+                  Student Name
+                </Label>
+
+                <Input
+                  name="studentName"
+                  value={
+                    formData.studentName
+                  }
+                  onChange={handleChange}
+                />
+
+              </div>
+
+
+              <div>
+
+                <Label>
+                  Roll No
+                </Label>
+
+                <Input
+                  type="number"
+                  name="rollNo"
+                  value={
+                    formData.rollNo
+                  }
+                  onChange={handleChange}
+                />
+
+              </div>
+
+
+              <div>
+
+                <Label>
+                  Year
+                </Label>
+
+                <select
+                  name="year"
+                  value={formData.year}
+                  onChange={handleChange}
+                  className="w-full border rounded-md p-2"
+                >
+
+                  {YEARS.map((year) => (
+
+                    <option
+                      key={year}
+                      value={year}
+                    >
+                      {year}
+                    </option>
+
+                  ))}
+
+                </select>
+
+              </div>
+
+
+              <div>
+
+                <Label>
+                  Stream
+                </Label>
+
+                <select
+                  name="stream"
+                  value={
+                    formData.stream
+                  }
+                  onChange={handleChange}
+                  className="w-full border rounded-md p-2"
+                >
+
+                  <option value="Science">
+                    Science
+                  </option>
+
+                  <option value="Commerce">
+                    Commerce
+                  </option>
+
+                </select>
+
+              </div>
+
+
+              <div>
+
+                <Label>
+                  Section
+                </Label>
+
+                <select
+                  name="section"
+                  value={
+                    formData.section
+                  }
+                  onChange={handleChange}
+                  className="w-full border rounded-md p-2"
+                >
+
+                  {formData.stream ===
+                  'Science' ? (
+                    <>
+                      <option value="PCMB">
+                        PCMB
+                      </option>
+
+                      <option value="PCMC">
+                        PCMC
+                      </option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="SEBA">
+                        SEBA
+                      </option>
+
+                      <option value="CEBA">
+                        CEBA
+                      </option>
+                    </>
+                  )}
+
+                </select>
+
+              </div>
+
+            </div>
+
+
+            {/* SUBJECTS */}
+
             <div>
-              <Label>Year</Label>
-              <Select
-                value={competitiveFormData.year.toString()}
-                onValueChange={(value) =>
-                  setCompetitiveFormData(prev => ({ ...prev, year: parseInt(value) }))
+
+              <h2 className="font-bold mb-4">
+
+                Subjects
+
+              </h2>
+
+
+              <div className="border rounded-lg overflow-hidden">
+
+                <Table>
+
+                  <TableHeader>
+
+                    <TableRow>
+
+                      <TableHead>
+                        Subject
+                      </TableHead>
+
+                      <TableHead>
+                        Theory
+                      </TableHead>
+
+                      <TableHead>
+                        Practical
+                      </TableHead>
+
+                    </TableRow>
+
+                  </TableHeader>
+
+
+                  <TableBody>
+
+                    {Object.keys(
+                      formData.subjects
+                    ).map((subject) => (
+
+                      <TableRow key={subject}>
+
+                        <TableCell>
+                          {subject}
+                        </TableCell>
+
+                        <TableCell>
+
+                          <Input
+                            type="number"
+                            value={
+                              formData
+                                .subjects[
+                                  subject
+                                ]
+                                ?.theory || 0
+                            }
+                            onChange={(e) =>
+                              handleSubjectChange(
+                                subject,
+                                'theory',
+                                e.target.value
+                              )
+                            }
+                          />
+
+                        </TableCell>
+
+                        <TableCell>
+
+                          <Input
+                            type="number"
+                            value={
+                              formData
+                                .subjects[
+                                  subject
+                                ]
+                                ?.practical || 0
+                            }
+                            onChange={(e) =>
+                              handleSubjectChange(
+                                subject,
+                                'practical',
+                                e.target.value
+                              )
+                            }
+                          />
+
+                        </TableCell>
+
+                      </TableRow>
+
+                    ))}
+
+                  </TableBody>
+
+                </Table>
+
+              </div>
+
+            </div>
+
+
+            {/* BUTTONS */}
+
+            <div className="flex justify-end gap-3">
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  setOpenDialog(false)
                 }
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {YEARS.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Total Appeared</Label>
-              <Input
-                type="number"
-                name="totalAppeared"
-                value={competitiveFormData.totalAppeared}
-                onChange={handleCompetitiveInputChange}
-              />
-            </div>
-            <div>
-              <Label>Total Qualified</Label>
-              <Input
-                type="number"
-                name="totalQualified"
-                value={competitiveFormData.totalQualified}
-                onChange={handleCompetitiveInputChange}
-              />
-            </div>
-            <div>
-              <Label>Highest Score</Label>
-              <Input
-                type="number"
-                name="highestScore"
-                value={competitiveFormData.highestScore}
-                onChange={handleCompetitiveInputChange}
-              />
-            </div>
-            <div>
-              <Label>Description (Optional)</Label>
-              <Input
-                type="text"
-                name="description"
-                value={competitiveFormData.description}
-                onChange={handleCompetitiveInputChange}
-                placeholder="Add any additional information"
-              />
+
+                Cancel
+
+              </Button>
+
+              <Button
+                type="submit"
+              >
+
+                {loading
+                  ? 'Saving...'
+                  : 'Save'}
+
+              </Button>
+
             </div>
 
-            <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
           </form>
+
         </DialogContent>
+
       </Dialog>
+
     </div>
   );
 };
 
-export default ManageResults;
 export { ManageResults };
+export default ManageResults;
