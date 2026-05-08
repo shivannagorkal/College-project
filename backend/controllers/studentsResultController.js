@@ -98,7 +98,6 @@ export const createStudentResult = async (req, res) => {
 export const updateStudentsResult = async (req, res) => {
 
     try {
-
         const data = { ...req.body };
 
         if (data.rollNo) {
@@ -111,9 +110,8 @@ export const updateStudentsResult = async (req, res) => {
 
         // UPDATE CLOUDINARY IMAGE URL
         if (req.file) {
-
             data.studentImage = req.file.path || req.file.secure_url;
-}
+        }
 
         // convert subjects string to object
         if (typeof data.subjects === 'string') {
@@ -135,22 +133,18 @@ export const updateStudentsResult = async (req, res) => {
             });
         }
 
-        const result = await StudentsResult.findByIdAndUpdate(
-            req.params.id,
-            data,
-            {
-                new: true,
-                runValidators: true
-            }
-        );
+        const result = await StudentsResult.findById(req.params.id);
 
         if (!result) {
-
             return res.status(404).json({
                 success: false,
                 message: 'Student Result Not Found'
             });
         }
+
+        Object.assign(result, data);
+
+        await result.save();
 
         res.status(200).json({
             success: true,

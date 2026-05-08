@@ -98,18 +98,14 @@ studentsResultSchema.pre('save', function(next) {
         return next(new Error('Invalid Section'));
     }
 
-    const filteredSubjects = {};
+    const existing = new Map(this.subjects);
+    this.subjects.clear();
 
     for (const subject of allowedSubjects) {
-
-        if (this.subjects.get(subject)) {
-
-            filteredSubjects[subject] =
-                this.subjects.get(subject);
+        if (existing.has(subject)) {
+            this.subjects.set(subject, existing.get(subject));
         }
     }
-
-    this.subjects = filteredSubjects;
 
     next();
 });

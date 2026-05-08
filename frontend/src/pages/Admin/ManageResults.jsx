@@ -29,12 +29,11 @@ const YEARS = Array.from(
 const sectionSubjects = {
   PCMB: ['Kannada', 'English', 'Physics', 'Chemistry', 'Mathematics', 'Biology'],
   PCMC: ['Kannada', 'English', 'Physics', 'Chemistry', 'Mathematics', 'Computer Science'],
-  SEBA: ['Kannada', 'English', 'Statistics', 'Economics', 'Business Studies', 'Accountancy'],
   CEBA: ['Kannada', 'English', 'Computer Science', 'Economics', 'Business Studies', 'Accountancy'],
 };
 
 const getDefaultSection = (stream) =>
-  stream === 'Science' ? 'PCMB' : 'SEBA';
+  stream === 'Science' ? 'PCMB' : 'CEBA';
 
 const buildEmptySubjects = (section) => {
   const subjects = {};
@@ -480,8 +479,8 @@ const ManageResults = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead rowSpan={2} className="text-center border">Subject</TableHead>
-                      <TableHead rowSpan={2} className="text-center border">Theory</TableHead>
-                      <TableHead rowSpan={2} className="text-center border">Practical</TableHead>
+                      <TableHead colSpan={2} className="text-center border">Theory</TableHead>
+                      <TableHead colSpan={2} className="text-center border">Practical</TableHead>
                     </TableRow>
                     <TableRow>
                       <TableHead className="text-center border">Max</TableHead>
@@ -498,13 +497,13 @@ const ManageResults = () => {
 
                       return (
                       <TableRow key={subject}>
-                        <TableCell>{subject}</TableCell>
+                        <TableCell className="text-center border">{subject}</TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-center border min-w-20">
                           {maxMarks?.theory ?? ''}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-center border">
                           <Input
                             type="number"
                             min={0}
@@ -515,11 +514,11 @@ const ManageResults = () => {
                           />
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-center border">
                           {maxMarks?.practical ?? ''}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-center border">
                           <Input
                             type="number"
                             min={0}
