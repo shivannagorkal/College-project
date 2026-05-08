@@ -5,7 +5,7 @@ import {
     createStudentResult,
     updateStudentsResult,
     deleteStudentsResult
-} from '../controllers/StudentsResultController.js';
+} from '../controllers/studentsResultController.js';
 
 import authMiddleware from '../middleware/authMiddleware.js';
 
