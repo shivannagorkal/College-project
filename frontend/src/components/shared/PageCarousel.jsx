@@ -34,7 +34,7 @@ export function PageCarousel({ page, height = '400px', children }) {
 
   return (
     <div
-      className="relative w-full overflow-hidden"
+      className="relative w-full overflow-hidden min-h-100 md:min-h-120"
       style={{ height }}
     >
       {images.length > 0 ? (

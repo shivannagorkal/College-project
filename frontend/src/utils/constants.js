@@ -1,34 +1,10 @@
 export const COLLEGE_NAME = 'AKRDevi PU College';
 export const COLLEGE_SHORT_NAME = 'AKRD';
-export const COLLEGE_LOGO = '';
-export const COLLEGE_LOCATION = 'Sriramnagara, Taluk Gangavathi, District Koppala, Karnataka';
-export const COLLEGE_PHONE = '+91-8386-271234';
-export const COLLEGE_EMAIL = 'info@akrdevi.edu.in';
-export const COLLEGE_FOUNDER = 'AL Prasad';
+export const COLLEGE_FOUNDER = 'A.K.R. Devi';
 export const COLLEGE_FOUNDED = 2013;
-
-export const SCIENCE_SUBJECTS = [
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'Mathematics',
-  'Computer Science',
-  'English',
-  'Kannada',
-];
-
-export const COMMERCE_SUBJECTS = [
-  'Accountancy',
-  'Business Studies',
-  'Economics',
-  'English',
-  'Kannada',
-  'Statistics',
-];
-
-export const DEPARTMENTS = ['Science', 'Commerce', 'Languages'];
-
-export const GALLERY_CATEGORIES = ['Sports', 'Cultural', 'Academic', 'Annual Day'];
+export const COLLEGE_LOCATION = 'Koppala District, Karnataka, India';
+export const COLLEGE_PHONE = '+91 12345 67890';
+export const COLLEGE_EMAIL = 'info@akrdevicollege.edu.in';
 
 export const NAV_LINKS = [
   { name: 'Home', href: '/' },
@@ -45,7 +21,26 @@ export const NAV_LINKS = [
   { name: 'Contact', href: '/contact' },
 ];
 
-export const YEARS = Array.from(
-  { length: new Date().getFullYear() - COLLEGE_FOUNDED + 1 },
-  (_, i) => COLLEGE_FOUNDED + i
-).reverse();
+export const SCIENCE_SUBJECTS = [
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Mathematics',
+  'Computer Science',
+  'English',
+];
+
+export const COMMERCE_SUBJECTS = [
+  'Accountancy',
+  'Business Studies',
+  'Economics',
+  'Statistics',
+  'Entrepreneurship',
+  'English',
+];
+
+export const GALLERY_CATEGORIES = ['All', 'Sports', 'Events', 'Campus', 'Achievements'];
+
+export const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+
+export const DEPARTMENTS = ['Science', 'Commerce', 'Languages'];

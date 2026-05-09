@@ -98,18 +98,22 @@ studentsResultSchema.pre('save', function(next) {
         return next(new Error('Invalid Section'));
     }
 
-    const existing = new Map(this.subjects);
-    this.subjects.clear();
+    // Remove subjects that are no longer allowed
+    for (const subject of this.subjects.keys()) {
+        if (!allowedSubjects.includes(subject)) {
+            this.subjects.delete(subject);
+        }
+    }
 
+    // Add missing allowed subjects with default values
     for (const subject of allowedSubjects) {
-        if (existing.has(subject)) {
-            this.subjects.set(subject, existing.get(subject));
+        if (!this.subjects.has(subject)) {
+            this.subjects.set(subject, { theory: 0, practical: 0, total: 0 });
         }
     }
 
     next();
 });
-
 export default mongoose.model(
     'StudentsResult',
     studentsResultSchema

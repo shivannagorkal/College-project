@@ -1,190 +1,159 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button }   from '@/components/ui/button';
+import { Input }    from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, CreditCard as Edit2, Plus } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { toast } from 'sonner';
-import { formatDate } from '@/utils/formatDate';
+import { CalendarDays, Plus } from 'lucide-react';
+import { toast }       from 'sonner';
+import { formatDate }  from '@/utils/formatDate';
 import { eventService } from '@/services/eventService';
+import { PageShell, PageHeader, Surface, Field, EmptyState, ActionButtons, SkeletonRow } from '@/components/admin/adminUI';
+
+const empty = { title: '', date: '', description: '' };
 
 export function ManageEvents() {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+  const [events,    setEvents]    = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [isOpen,    setIsOpen]    = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ title: '', date: '', description: '' });
+  const [formData,  setFormData]  = useState(empty);
+  const [saving,    setSaving]    = useState(false);
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
+  useEffect(() => { fetchEvents(); }, []);
 
-  const fetchEvents = async () => {
+  async function fetchEvents() {
     try {
       setLoading(true);
       const data = await eventService.getEvents();
       setEvents(Array.isArray(data) ? data : []);
-    } catch (error) {
-      toast.error('Failed to load events');
-    } finally {
-      setLoading(false);
-    }
-  };
+    } catch { toast.error('Failed to load events'); }
+    finally  { setLoading(false); }
+  }
 
-  const handleOpen = (event = null) => {
-    if (event) {
-      setFormData(event);
-      setEditingId(event._id || event.id);
-    } else {
-      setFormData({ title: '', date: '', description: '' });
-      setEditingId(null);
-    }
-    setIsOpen(true);
-  };
+  function openNew()   { setFormData(empty); setEditingId(null); setIsOpen(true); }
+  function openEdit(e) { setFormData(e); setEditingId(e._id || e.id); setIsOpen(true); }
+  function close()     { setIsOpen(false); setEditingId(null); setFormData(empty); }
 
-  const handleClose = () => {
-    setIsOpen(false);
-    setEditingId(null);
-    setFormData({ title: '', date: '', description: '' });
-  };
-
-  const handleSave = async () => {
-    if (!formData.title || !formData.date) {
-      toast.error('Title and Date are required');
-      return;
-    }
+  async function handleSave() {
+    if (!formData.title || !formData.date) { toast.error('Title and date are required'); return; }
     try {
+      setSaving(true);
       if (editingId) {
         await eventService.updateEvent(editingId, formData);
-        toast.success('Event updated successfully');
+        toast.success('Event updated');
       } else {
         await eventService.createEvent(formData);
-        toast.success('Event added successfully');
+        toast.success('Event created');
       }
-      handleClose();
-      fetchEvents();
-    } catch (error) {
-      toast.error('Failed to save event');
-    }
-  };
+      close(); fetchEvents();
+    } catch { toast.error('Failed to save event'); }
+    finally  { setSaving(false); }
+  }
 
-  const handleDelete = async (id) => {
-    try {
-      await eventService.deleteEvent(id);
-      toast.success('Event deleted');
-      fetchEvents();
-    } catch (error) {
-      toast.error('Failed to delete event');
-    }
-  };
+  async function handleDelete(id) {
+    try { await eventService.deleteEvent(id); toast.success('Event deleted'); fetchEvents(); }
+    catch { toast.error('Failed to delete'); }
+  }
 
   return (
-    <div className="min-h-screen bg-secondary p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Manage Events</h1>
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpen()} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Event
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingId ? 'Edit Event' : 'Add New Event'}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Title</label>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Event title"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Date</label>
-                  <Input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Event description"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={handleClose}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSave}>{editingId ? 'Update' : 'Create'}</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Events"
+        subtitle={`${events.length} event${events.length !== 1 ? 's' : ''}`}
+        action={
+          <Button onClick={openNew} className="gap-2">
+            <Plus className="w-4 h-4" /> Add Event
+          </Button>
+        }
+      />
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Spinner />
+      <Surface>
+        <div className="overflow-x-auto rounded-2xl">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-secondary hover:bg-secondary">
+                <TableHead className="font-semibold text-foreground">Title</TableHead>
+                <TableHead className="font-semibold text-foreground">Date</TableHead>
+                <TableHead className="font-semibold text-foreground hidden md:table-cell">Description</TableHead>
+                <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && [...Array(4)].map((_, i) => <SkeletonRow key={i} cols={4} />)}
+
+              {!loading && events.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    <EmptyState icon={CalendarDays} title="No events yet"
+                      description="Click 'Add Event' to create your first event." />
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {!loading && events.map(event => (
+                <TableRow key={event._id || event.id}
+                  className="hover:bg-secondary/50 transition-colors">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <CalendarDays className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="font-medium text-foreground">{event.title}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                      {formatDate(event.date)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <span className="text-sm text-muted-foreground line-clamp-1 max-w-xs">
+                      {event.description || '—'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <ActionButtons
+                      onEdit={() => openEdit(event)}
+                      onDelete={() => handleDelete(event._id || event.id)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </Surface>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit Event' : 'New Event'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <Field label="Title">
+              <Input value={formData.title}
+                onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
+                placeholder="Event title" />
+            </Field>
+            <Field label="Date">
+              <Input type="date" value={formData.date}
+                onChange={e => setFormData(p => ({ ...p, date: e.target.value }))} />
+            </Field>
+            <Field label="Description">
+              <Textarea value={formData.description}
+                onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
+                placeholder="Optional description…" rows={3} />
+            </Field>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={close}>Cancel</Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving…' : editingId ? 'Update' : 'Create'}
+              </Button>
+            </div>
           </div>
-        ) : (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {events.map((event) => (
-                      <TableRow key={event._id || event.id}>
-                        <TableCell className="font-medium">{event.title}</TableCell>
-                        <TableCell>{formatDate(event.date)}</TableCell>
-                        <TableCell className="max-w-xs truncate">{event.description}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleOpen(event)}
-                              className="gap-1"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDelete(event._id || event.id)}
-                              className="gap-1"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
   );
 }

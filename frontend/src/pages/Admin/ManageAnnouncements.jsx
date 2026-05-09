@@ -1,165 +1,150 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button }   from '@/components/ui/button';
+import { Input }    from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Trash2, CreditCard as Edit2, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Megaphone, Plus, CalendarDays } from 'lucide-react';
+import { toast }    from 'sonner';
 import { formatDate } from '@/utils/formatDate';
-import { toast } from 'sonner';
 import { announcementService } from '@/services/announcementService';
+import { PageShell, PageHeader, Surface, Field, EmptyState, ActionButtons } from '@/components/admin/adminUI';
+
+const empty = { title: '', description: '', date: '' };
 
 export function ManageAnnouncements() {
   const [announcements, setAnnouncements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ title: '', description: '', date: '' });
+  const [loading,       setLoading]       = useState(true);
+  const [isOpen,        setIsOpen]        = useState(false);
+  const [editingId,     setEditingId]     = useState(null);
+  const [formData,      setFormData]      = useState(empty);
+  const [saving,        setSaving]        = useState(false);
 
-useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+  useEffect(() => { fetch(); }, []);
 
-  const fetchAnnouncements = async () => {
+  async function fetch() {
     try {
       setLoading(true);
       const data = await announcementService.getAnnouncements();
       setAnnouncements(Array.isArray(data) ? data : []);
-    } catch (error) {
-      toast.error('Failed to load Announcements');
-    } finally {
-      setLoading(false);
-    }
-  };
+    } catch { toast.error('Failed to load announcements'); }
+    finally  { setLoading(false); }
+  }
 
-  const handleOpen = (announcement = null) => {
-    if (announcement) {
-      setFormData(announcement);
-      setEditingId(announcement._id || announcement.id);
-    } else {
-      setFormData({ title: '', description: '', date: '' });
-      setEditingId(null);
-    }
-    setIsOpen(true);
-  };
+  function openNew()  { setFormData(empty); setEditingId(null); setIsOpen(true); }
+  function openEdit(a) { setFormData(a); setEditingId(a._id || a.id); setIsOpen(true); }
+  function close()    { setIsOpen(false); setEditingId(null); setFormData(empty); }
 
-  const handleClose = () => {
-    setIsOpen(false);
-    setEditingId(null);
-    setFormData({ title: '', description: '', date: '' });
-  };
-
-  const handleSave = async () => {
-    if (!formData.title || !formData.date) return;
+  async function handleSave() {
+    if (!formData.title || !formData.date) { toast.error('Title and date are required'); return; }
     try {
+      setSaving(true);
       if (editingId) {
         await announcementService.updateAnnouncement(editingId, formData);
-        toast.success('Announcement updated successfully');
+        toast.success('Announcement updated');
       } else {
         await announcementService.createAnnouncement(formData);
-        toast.success('Announcement created successfully');
+        toast.success('Announcement created');
       }
-      handleClose();
-      fetchAnnouncements();
-    } catch (error) {
-        toast.error('Failed to save Announcement');
-    }
-  };
+      close(); fetch();
+    } catch { toast.error('Failed to save'); }
+    finally  { setSaving(false); }
+  }
 
-  const handleDelete = async (id) => {
+  async function handleDelete(id) {
     try {
       await announcementService.deleteAnnouncement(id);
-      toast.success('Announcement deleted successfully');
-      fetchAnnouncements();
-    } catch (error) {
-      toast.error('Failed to delete Announcement');
-    }
-  };
+      toast.success('Deleted');
+      fetch();
+    } catch { toast.error('Failed to delete'); }
+  }
 
   return (
-    <div className="min-h-screen bg-secondary p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Manage Announcements</h1>
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpen()} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Announcement
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editingId ? 'Edit Announcement' : 'Add New Announcement'}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Title</label>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Announcement title"
-                  />
+    <PageShell>
+      <PageHeader
+        title="Announcements"
+        subtitle={`${announcements.length} announcement${announcements.length !== 1 ? 's' : ''}`}
+        action={
+          <Button onClick={openNew} className="gap-2">
+            <Plus className="w-4 h-4" /> Add Announcement
+          </Button>
+        }
+      />
+
+      {loading ? (
+        <Surface>
+          <div className="p-8 space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="animate-pulse flex gap-4">
+                <div className="h-16 flex-1 bg-muted rounded-xl" />
+              </div>
+            ))}
+          </div>
+        </Surface>
+      ) : announcements.length === 0 ? (
+        <Surface>
+          <EmptyState icon={Megaphone} title="No announcements yet"
+            description="Click 'Add Announcement' to create your first one." />
+        </Surface>
+      ) : (
+        <div className="space-y-3">
+          {announcements.map((a) => (
+            <Surface key={a._id || a.id}
+              className="p-4 sm:p-5 flex items-start justify-between gap-4 hover:shadow-md transition-shadow">
+              <div className="flex gap-4 items-start min-w-0">
+                {/* Icon */}
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Megaphone className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Date</label>
-                  <Input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Announcement description"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={handleClose}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSave}>{editingId ? 'Update' : 'Create'}</Button>
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground leading-snug truncate">{a.title}</p>
+                  {a.description && (
+                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{a.description}</p>
+                  )}
+                  <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                    <CalendarDays className="w-3.5 h-3.5" />
+                    {formatDate(a.date)}
+                  </div>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
+              <ActionButtons
+                onEdit={() => openEdit(a)}
+                onDelete={() => handleDelete(a._id || a.id)}
+              />
+            </Surface>
+          ))}
         </div>
+      )}
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              {announcements.map((announcement) => (
-                <div key={announcement.id} className="border rounded-lg p-4 flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-bold mb-1">{announcement.title}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{announcement.description}</p>
-                    <p className="text-xs text-gray-500">{formatDate(announcement.date)}</p>
-                  </div>
-                  <div className="flex gap-2 ml-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpen(announcement)}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(announcement.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+      {/* Dialog */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit Announcement' : 'New Announcement'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <Field label="Title">
+              <Input value={formData.title}
+                onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
+                placeholder="Announcement title" />
+            </Field>
+            <Field label="Date">
+              <Input type="date" value={formData.date}
+                onChange={e => setFormData(p => ({ ...p, date: e.target.value }))} />
+            </Field>
+            <Field label="Description">
+              <Textarea value={formData.description}
+                onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
+                placeholder="Optional description…" rows={3} />
+            </Field>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={close}>Cancel</Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving…' : editingId ? 'Update' : 'Create'}
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
   );
 }
