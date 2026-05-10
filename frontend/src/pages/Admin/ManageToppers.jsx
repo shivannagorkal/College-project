@@ -1,555 +1,398 @@
 import { useEffect, useState } from 'react';
+import { Button }  from '@/components/ui/button';
+import { Input }   from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Trash2, Edit2, Plus } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { GraduationCap, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { topperService } from '@/services/topperService';
 import { YEARS } from '@/utils/constants';
+import { PageShell, PageHeader, Surface, Field, EmptyState, ActionButtons, SkeletonRow } from '@/components/admin/adminUI';
 
-const defaultFormData = {
-  topperType: 'Board',
-  name: '',
-  rank: '',
-  year: YEARS[0],
-  stream: 'Science',
-  group: 'PCMB',
-  percentage: '',
-  score: '',
-  outOf: '',
-  percentile: '',
-  karnatakaRank: '',
+const TOPPER_TYPES = ['Board', 'NEET', 'JEE', 'KCET'];
+
+const getDefaultOutOf = (t) => t === 'NEET' ? '720' : t === 'JEE' ? '300' : t === 'KCET' ? '120' : '';
+
+const defaultForm = {
+  topperType: 'Board', name: '', rank: '', year: YEARS[0],
+  stream: 'Science', group: 'PCMB', percentage: '',
+  score: '', outOf: '', percentile: '', karnatakaRank: '',
 };
 
-const getDefaultOutOf = (topperType) => {
-  if (topperType === 'NEET') return '720';
-  if (topperType === 'JEE') return '300';
-  if (topperType === 'KCET') return '120';
-  return '';
-};
+function getInitials(name = '') {
+  return name.split(' ').filter(Boolean).map(p => p[0]).join('').toUpperCase().slice(0, 2);
+}
 
-const getInitials = (name = '') =>
-  name
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
-const PhotoCell = ({ topper }) => (
-  topper.photo ? (
-    <img src={topper.photo} alt={topper.name} className="w-10 h-10 rounded-full object-cover" />
+function Avatar({ topper }) {
+  return topper.photo ? (
+    <img src={topper.photo} alt={topper.name}
+      className="w-9 h-9 rounded-full object-cover border border-border" />
   ) : (
-    <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center text-sm font-bold">
+    <div className="w-9 h-9 rounded-full bg-primary/10 text-primary
+      flex items-center justify-center text-xs font-bold shrink-0">
       {getInitials(topper.name)}
     </div>
-  )
-);
+  );
+}
+
+const BADGE = {
+  Board: 'bg-blue-100 text-blue-700',
+  NEET:  'bg-green-100 text-green-700',
+  JEE:   'bg-orange-100 text-orange-700',
+  KCET:  'bg-pink-100 text-pink-700',
+};
 
 export function ManageToppers() {
-  const [toppers, setToppers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+  const [toppers,   setToppers]   = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [isOpen,    setIsOpen]    = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
-  const [formData, setFormData] = useState(defaultFormData);
+  const [formData,  setFormData]  = useState(defaultForm);
+  const [saving,    setSaving]    = useState(false);
+  const [activeTab, setActiveTab] = useState('Board');
 
+  useEffect(() => { fetchToppers(); }, []);
+
+  // Sync stream→group
   useEffect(() => {
-    fetchToppers();
-  }, []);
-
-  useEffect(() => {
-    setFormData((prev) => {
-      if (prev.topperType === 'Board') {
-        return {
-          ...prev,
-          stream: prev.stream || 'Science',
-          group: prev.stream === 'Science' ? (prev.group || 'PCMB') : 'Commerce',
-          outOf: '',
-        };
-      }
-
-      return {
-        ...prev,
-        stream: '',
-        group: '',
-        percentage: '',
-        outOf: getDefaultOutOf(prev.topperType),
-      };
-    });
-  }, [formData.topperType]);
-
-  useEffect(() => {
-    if (formData.topperType !== 'Board') {
-      return;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      group: prev.stream === 'Science' ? (prev.group === 'Commerce' ? 'PCMB' : prev.group || 'PCMB') : 'Commerce',
+    if (formData.topperType !== 'Board') return;
+    setFormData(p => ({
+      ...p,
+      group: p.stream === 'Science'
+        ? (p.group === 'Commerce' ? 'PCMB' : p.group || 'PCMB')
+        : 'Commerce',
     }));
   }, [formData.stream, formData.topperType]);
 
-  const fetchToppers = async () => {
+  // Sync type→outOf
+  useEffect(() => {
+    setFormData(p => ({
+      ...p,
+      outOf: getDefaultOutOf(p.topperType),
+      ...(p.topperType === 'Board'
+        ? {}
+        : { stream: '', group: '', percentage: '' }),
+    }));
+  }, [formData.topperType]);
+
+  async function fetchToppers() {
     try {
       setLoading(true);
       const data = await topperService.getToppers();
       setToppers(Array.isArray(data) ? data : []);
-    } catch (error) {
-      toast.error('Failed to load toppers');
-    } finally {
-      setLoading(false);
-    }
-  };
+    } catch { toast.error('Failed to load toppers'); }
+    finally  { setLoading(false); }
+  }
 
-  const resetForm = () => {
-    setFormData(defaultFormData);
-    setEditingId(null);
-    setPhotoFile(null);
-  };
+  function resetForm() { setFormData(defaultForm); setEditingId(null); setPhotoFile(null); }
 
-  const handleOpen = (topper = null, type = 'Board') => {
-    if (topper) {
-      setFormData({
-        topperType: topper.topperType || 'Board',
-        name: topper.name || '',
-        rank: topper.rank || '',
-        year: topper.year || YEARS[0],
-        stream: topper.stream || 'Science',
-        group: topper.group || ((topper.stream || 'Science') === 'Science' ? 'PCMB' : 'Commerce'),
-        percentage: topper.percentage || '',
-        score: topper.score || '',
-        outOf: topper.outOf || getDefaultOutOf(topper.topperType),
-        percentile: topper.percentile || '',
-        karnatakaRank: topper.karnatakaRank || '',
-      });
-      setEditingId(topper._id || topper.id);
-      setPhotoFile(null);
-    } else {
-      setFormData({
-        ...defaultFormData,
-        topperType: type,
-        outOf: getDefaultOutOf(type),
-        stream: type === 'Board' ? 'Science' : '',
-        group: type === 'Board' ? 'PCMB' : '',
-      });
-      setEditingId(null);
-      setPhotoFile(null);
-    }
-    setIsOpen(true);
-  };
-
-  const handleClose = () => {
-    setIsOpen(false);
+  function openNew(type = activeTab) {
     resetForm();
-  };
+    setFormData(p => ({
+      ...p, topperType: type, outOf: getDefaultOutOf(type),
+      stream: type === 'Board' ? 'Science' : '',
+      group:  type === 'Board' ? 'PCMB'    : '',
+    }));
+    setIsOpen(true);
+  }
 
-  const buildFormDataPayload = () => {
-    const fd = new FormData();
-    fd.append('name', formData.name);
-    fd.append('topperType', formData.topperType);
-    fd.append('rank', formData.rank);
-    fd.append('year', formData.year);
-    fd.append('stream', formData.stream || '');
-    fd.append('group', formData.group || '');
-    fd.append('percentage', formData.percentage || '');
-    fd.append('score', formData.score || '');
-    fd.append('outOf', formData.outOf || '');
-    fd.append('percentile', formData.percentile || '');
-    fd.append('karnatakaRank', formData.karnatakaRank || '');
-    if (photoFile) fd.append('photo', photoFile);
-    return fd;
-  };
+  function openEdit(t) {
+    setFormData({
+      topperType:     t.topperType || 'Board',
+      name:           t.name || '',
+      rank:           t.rank || '',
+      year:           t.year || YEARS[0],
+      stream:         t.stream || 'Science',
+      group:          t.group || 'PCMB',
+      percentage:     t.percentage || '',
+      score:          t.score || '',
+      outOf:          t.outOf || getDefaultOutOf(t.topperType),
+      percentile:     t.percentile || '',
+      karnatakaRank:  t.karnatakaRank || '',
+    });
+    setEditingId(t._id || t.id);
+    setPhotoFile(null);
+    setIsOpen(true);
+  }
 
-  const handleSave = async () => {
-    if (!formData.name || !formData.rank || !formData.year) return;
+  function close() { setIsOpen(false); resetForm(); }
 
-    try {
-      const fd = buildFormDataPayload();
-
-      if (editingId) {
-        await topperService.updateTopper(editingId, fd);
-        toast.success('Topper updated successfully');
-      } else {
-        await topperService.createTopper(fd);
-        toast.success('Topper added successfully');
-      }
-
-      handleClose();
-      fetchToppers();
-    } catch (error) {
-      toast.error('Failed to save topper');
+  async function handleSave() {
+    if (!formData.name || !formData.rank || !formData.year) {
+      toast.error('Name, rank and year are required'); return;
     }
-  };
-
-  const handleDelete = async (id) => {
     try {
-      await topperService.deleteTopper(id);
-      toast.success('Topper deleted');
-      fetchToppers();
-    } catch (error) {
-      toast.error('Failed to delete topper');
-    }
-  };
+      setSaving(true);
+      const fd = new FormData();
+      Object.entries(formData).forEach(([k, v]) => fd.append(k, v ?? ''));
+      if (photoFile) fd.append('photo', photoFile);
+      if (editingId) { await topperService.updateTopper(editingId, fd); toast.success('Updated'); }
+      else           { await topperService.createTopper(fd);            toast.success('Added'); }
+      close(); fetchToppers();
+    } catch { toast.error('Failed to save'); }
+    finally  { setSaving(false); }
+  }
 
-  const boardToppers = toppers.filter((topper) => topper.topperType === 'Board');
-  const neetToppers = toppers.filter((topper) => topper.topperType === 'NEET');
-  const jeeToppers = toppers.filter((topper) => topper.topperType === 'JEE');
-  const kcetToppers = toppers.filter((topper) => topper.topperType === 'KCET');
+  async function handleDelete(id) {
+    try { await topperService.deleteTopper(id); toast.success('Deleted'); fetchToppers(); }
+    catch { toast.error('Failed to delete'); }
+  }
 
-  const renderActions = (topper) => (
-    <div className="flex justify-end gap-2">
-      <Button size="sm" variant="outline" onClick={() => handleOpen(topper)}>
-        <Edit2 className="w-4 h-4" />
-      </Button>
-      <Button
-        size="sm"
-        variant="destructive"
-        onClick={() => handleDelete(topper._id || topper.id)}
-      >
-        <Trash2 className="w-4 h-4" />
-      </Button>
-    </div>
-  );
+  function renderTable(data, type) {
+    const isBoard = type === 'Board';
+    return (
+      <div className="overflow-x-auto rounded-2xl">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-secondary hover:bg-secondary">
+              <TableHead className="font-semibold text-foreground">Student</TableHead>
+              {isBoard ? (
+                <>
+                  <TableHead className="font-semibold text-foreground hidden sm:table-cell">Stream</TableHead>
+                  <TableHead className="font-semibold text-foreground hidden md:table-cell">Group</TableHead>
+                  <TableHead className="font-semibold text-foreground">Percentage</TableHead>
+                </>
+              ) : (
+                <>
+                  <TableHead className="font-semibold text-foreground">Score</TableHead>
+                  <TableHead className="font-semibold text-foreground hidden sm:table-cell">
+                    {type === 'KCET' ? 'KA Rank' : 'Percentile'}
+                  </TableHead>
+                </>
+              )}
+              <TableHead className="font-semibold text-foreground">Rank</TableHead>
+              <TableHead className="font-semibold text-foreground hidden md:table-cell">Year</TableHead>
+              <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading && [...Array(3)].map((_, i) => <SkeletonRow key={i} cols={isBoard ? 7 : 6} />)}
 
-  const renderBoardTable = (data) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Photo</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Stream</TableHead>
-          <TableHead>Group</TableHead>
-          <TableHead>Percentage</TableHead>
-          <TableHead>Rank</TableHead>
-          <TableHead>Year</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((topper) => (
-          <TableRow key={topper._id || topper.id}>
-            <TableCell><PhotoCell topper={topper} /></TableCell>
-            <TableCell className="font-medium">{topper.name}</TableCell>
-            <TableCell>{topper.stream}</TableCell>
-            <TableCell>{topper.group}</TableCell>
-            <TableCell>{topper.percentage}%</TableCell>
-            <TableCell>#{topper.rank}</TableCell>
-            <TableCell>{topper.year}</TableCell>
-            <TableCell className="text-right">{renderActions(topper)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-
-  const renderScoreTable = (data, type) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Photo</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Score</TableHead>
-          {type === 'KCET' ? (
-            <TableHead>Karnataka Rank</TableHead>
-          ) : (
-            <TableHead>Percentile</TableHead>
-          )}
-          <TableHead>Rank</TableHead>
-          <TableHead>Year</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((topper) => (
-          <TableRow key={topper._id || topper.id}>
-            <TableCell><PhotoCell topper={topper} /></TableCell>
-            <TableCell className="font-medium">{topper.name}</TableCell>
-            <TableCell>{topper.score}/{topper.outOf}</TableCell>
-            {type === 'KCET' ? (
-              <TableCell>{topper.karnatakaRank ? `#${topper.karnatakaRank}` : '-'}</TableCell>
-            ) : (
-              <TableCell>{topper.percentile || '-'}</TableCell>
+            {!loading && data.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={isBoard ? 7 : 6}>
+                  <EmptyState icon={GraduationCap}
+                    title={`No ${type} toppers yet`}
+                    description={`Click "Add Topper" to add a ${type} topper.`} />
+                </TableCell>
+              </TableRow>
             )}
-            <TableCell>#{topper.rank}</TableCell>
-            <TableCell>{topper.year}</TableCell>
-            <TableCell className="text-right">{renderActions(topper)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
 
-  const renderTableCard = (content) => (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="overflow-x-auto">{content}</div>
-      </CardContent>
-    </Card>
-  );
+            {!loading && data.map(t => (
+              <TableRow key={t._id || t.id} className="hover:bg-secondary/50 transition-colors">
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar topper={t} />
+                    <span className="font-medium text-foreground">{t.name}</span>
+                  </div>
+                </TableCell>
+                {isBoard ? (
+                  <>
+                    <TableCell className="hidden sm:table-cell">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${BADGE[type]}`}>
+                        {t.stream}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{t.group}</TableCell>
+                    <TableCell className="font-semibold text-foreground">{t.percentage}%</TableCell>
+                  </>
+                ) : (
+                  <>
+                    <TableCell className="font-semibold text-foreground">
+                      {t.score}<span className="text-muted-foreground font-normal">/{t.outOf}</span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                      {type === 'KCET'
+                        ? (t.karnatakaRank ? `#${t.karnatakaRank}` : '—')
+                        : (t.percentile || '—')}
+                    </TableCell>
+                  </>
+                )}
+                <TableCell>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full
+                    text-xs font-bold bg-primary/10 text-primary">
+                    #{t.rank}
+                  </span>
+                </TableCell>
+                <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{t.year}</TableCell>
+                <TableCell className="text-right">
+                  <ActionButtons onEdit={() => openEdit(t)}
+                    onDelete={() => handleDelete(t._id || t.id)} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  const byType = (type) => toppers.filter(t => t.topperType === type);
 
   return (
-    <div className="min-h-screen bg-secondary p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Manage Toppers</h1>
-          <Button onClick={() => handleOpen(null, 'Board')} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Topper
+    <PageShell>
+      <PageHeader
+        title="Toppers"
+        subtitle={`${toppers.length} topper${toppers.length !== 1 ? 's' : ''} across all categories`}
+        action={
+          <Button onClick={() => openNew(activeTab)} className="gap-2">
+            <Plus className="w-4 h-4" /> Add Topper
           </Button>
-        </div>
+        }
+      />
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Spinner />
-          </div>
-        ) : (
-          <Tabs defaultValue="Board" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="Board">Board</TabsTrigger>
-              <TabsTrigger value="NEET">NEET</TabsTrigger>
-              <TabsTrigger value="JEE">JEE</TabsTrigger>
-              <TabsTrigger value="KCET">KCET</TabsTrigger>
-            </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Surface className="p-1 mb-4">
+          <TabsList className="w-full grid grid-cols-4 bg-transparent gap-1">
+            {TOPPER_TYPES.map(type => (
+              <TabsTrigger key={type} value={type}
+                className="rounded-xl data-[state=active]:bg-primary
+                  data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm
+                  text-muted-foreground font-medium text-sm">
+                {type}
+                <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold
+                  ${activeTab === type ? 'bg-primary-foreground/20' : 'bg-muted'}`}>
+                  {byType(type).length}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Surface>
 
-            <TabsContent value="Board" className="mt-6">
-              {renderTableCard(renderBoardTable(boardToppers))}
-            </TabsContent>
+        {TOPPER_TYPES.map(type => (
+          <TabsContent key={type} value={type}>
+            <Surface>{renderTable(byType(type), type)}</Surface>
+          </TabsContent>
+        ))}
+      </Tabs>
 
-            <TabsContent value="NEET" className="mt-6">
-              {renderTableCard(renderScoreTable(neetToppers, 'NEET'))}
-            </TabsContent>
+      {/* Add/Edit dialog */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit Topper' : 'Add Topper'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
 
-            <TabsContent value="JEE" className="mt-6">
-              {renderTableCard(renderScoreTable(jeeToppers, 'JEE'))}
-            </TabsContent>
+            <Field label="Topper Type">
+              <Select value={formData.topperType}
+                onValueChange={v => setFormData(p => ({ ...p, topperType: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TOPPER_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
 
-            <TabsContent value="KCET" className="mt-6">
-              {renderTableCard(renderScoreTable(kcetToppers, 'KCET'))}
-            </TabsContent>
-          </Tabs>
-        )}
+            <Field label="Name">
+              <Input value={formData.name}
+                onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+                placeholder="Student name" />
+            </Field>
 
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle>{editingId ? 'Edit Topper' : 'Add New Topper'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Topper Type</label>
-                <Select
-                  value={formData.topperType}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      topperType: value,
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Rank">
+                <Input type="number" value={formData.rank}
+                  onChange={e => setFormData(p => ({ ...p, rank: e.target.value }))}
+                  placeholder="1" />
+              </Field>
+              <Field label="Year">
+                <Select value={formData.year.toString()}
+                  onValueChange={v => setFormData(p => ({ ...p, year: Number(v) }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Board">Board</SelectItem>
-                    <SelectItem value="NEET">NEET</SelectItem>
-                    <SelectItem value="JEE">JEE</SelectItem>
-                    <SelectItem value="KCET">KCET</SelectItem>
+                    {YEARS.map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Student name"
-                />
-              </div>
+            <Field label="Photo">
+              <Input type="file" accept="image/*"
+                onChange={e => setPhotoFile(e.target.files?.[0] || null)} />
+            </Field>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Rank</label>
-                  <Input
-                    type="number"
-                    value={formData.rank}
-                    onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
-                    placeholder="1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Year</label>
-                  <Select
-                    value={formData.year.toString()}
-                    onValueChange={(value) => setFormData({ ...formData, year: Number(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {YEARS.map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Photo</label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-                />
-              </div>
-
-              {formData.topperType === 'Board' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Stream</label>
-                      <Select
-                        value={formData.stream}
-                        onValueChange={(value) =>
-                          setFormData({
-                            ...formData,
-                            stream: value,
-                            group: value === 'Science' ? 'PCMB' : 'Commerce',
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+            {/* Board-specific */}
+            {formData.topperType === 'Board' && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Stream">
+                    <Select value={formData.stream}
+                      onValueChange={v => setFormData(p => ({
+                        ...p, stream: v, group: v === 'Science' ? 'PCMB' : 'Commerce',
+                      }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Science">Science</SelectItem>
+                        <SelectItem value="Commerce">Commerce</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  {formData.stream === 'Science' && (
+                    <Field label="Group">
+                      <Select value={formData.group}
+                        onValueChange={v => setFormData(p => ({ ...p, group: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Science">Science</SelectItem>
-                          <SelectItem value="Commerce">Commerce</SelectItem>
+                          <SelectItem value="PCMB">PCMB</SelectItem>
+                          <SelectItem value="PCMC">PCMC</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
+                    </Field>
+                  )}
+                </div>
+                <Field label="Percentage">
+                  <Input type="number" step="0.01" value={formData.percentage}
+                    onChange={e => setFormData(p => ({ ...p, percentage: e.target.value }))}
+                    placeholder="98.5" />
+                </Field>
+              </>
+            )}
 
-                    {formData.stream === 'Science' && (
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Group</label>
-                        <Select
-                          value={formData.group}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, group: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="PCMB">PCMB</SelectItem>
-                            <SelectItem value="PCMC">PCMC</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
+            {/* Entrance-specific */}
+            {['NEET','JEE','KCET'].includes(formData.topperType) && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Score">
+                    <Input type="number" value={formData.score}
+                      onChange={e => setFormData(p => ({ ...p, score: e.target.value }))}
+                      placeholder="650" />
+                  </Field>
+                  <Field label="Out Of">
+                    <Input type="number" value={formData.outOf}
+                      onChange={e => setFormData(p => ({ ...p, outOf: e.target.value }))}
+                      placeholder={getDefaultOutOf(formData.topperType)} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Percentile">
+                    <Input type="number" step="0.01" value={formData.percentile}
+                      onChange={e => setFormData(p => ({ ...p, percentile: e.target.value }))}
+                      placeholder="99.5" />
+                  </Field>
+                  {formData.topperType === 'KCET' && (
+                    <Field label="Karnataka Rank">
+                      <Input type="number" value={formData.karnatakaRank}
+                        onChange={e => setFormData(p => ({ ...p, karnatakaRank: e.target.value }))}
+                        placeholder="12" />
+                    </Field>
+                  )}
+                </div>
+              </>
+            )}
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Percentage</label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formData.percentage}
-                      onChange={(e) => setFormData({ ...formData, percentage: e.target.value })}
-                      placeholder="98.5"
-                    />
-                  </div>
-                </>
-              )}
-
-              {['NEET', 'JEE', 'KCET'].includes(formData.topperType) && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Score</label>
-                      <Input
-                        type="number"
-                        value={formData.score}
-                        onChange={(e) => setFormData({ ...formData, score: e.target.value })}
-                        placeholder="650"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Out Of</label>
-                      <Input
-                        type="number"
-                        value={formData.outOf}
-                        onChange={(e) => setFormData({ ...formData, outOf: e.target.value })}
-                        placeholder={getDefaultOutOf(formData.topperType)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Percentile</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.percentile}
-                        onChange={(e) => setFormData({ ...formData, percentile: e.target.value })}
-                        placeholder="99.5"
-                      />
-                    </div>
-
-                    {formData.topperType === 'KCET' && (
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Karnataka Rank</label>
-                        <Input
-                          type="number"
-                          value={formData.karnatakaRank}
-                          onChange={(e) => setFormData({ ...formData, karnatakaRank: e.target.value })}
-                          placeholder="12"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave}>{editingId ? 'Update' : 'Create'}</Button>
-              </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={close}>Cancel</Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving…' : editingId ? 'Update' : 'Create'}
+              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
   );
 }
